@@ -100,7 +100,7 @@ loadBG:
 	sta $2006
 	ldx #$00
 BGLoop:
-	lda #$80 ; 80 is just a stripey tile pattern ,lel
+	lda #$42 ; 42 is just a stripey tile pattern ,lel
 	sta $2007
 	sta $2007
 	sta $2007
@@ -219,20 +219,20 @@ PlayerSpriteData:
 	.db $88, $11, $40, $88 
 	
 BackgroundPalette:
-	.db $3a, $20, $2a, $11, $04, $14, $24, $34, $04, $14, $24, $34, $04, $14, $24, $34 ; bg
+	.db $2a, $30, $11, $1a, $2a, $06, $0a, $1a, $2a, $15, $27, $30, $2a, $13, $24, $30 ; bg
 	.db $2b, $15, $27, $30, $04, $14, $24, $34, $04, $14, $24, $34, $04, $14, $24, $34 ; sprites
 	
 text_TheLicc:
 	.db $1d, $31, $2e, $24, $15, $32, $2c, $2c, $ff ; "THE LICC"
 	
 text_EngineTitle:
-	.db $0f, $0a, $16, $12, $1d, $18, $17, $0e, $24, $3d, $0e, $3c, $3d, $fe ; famitone test 
+	.db $0f, $0a, $16, $12, $1d, $18, $17, $0e, $24, $1d, $0e, $1c, $1d, $fe ; famitone test 
 	
-	.db $44, $2a, $37, $2d, $24, $38, $3d, $31, $2e, $3b, $24 ; (and other 
-	.db $3e, $3d, $32, $35, $3c, $24, $35, $38, $35, $45, $fe ; utils lol)
+	.db $44, $0a, $17, $0d, $24, $18, $1d, $11, $0e, $1b, $24 ; (and other 
+	.db $1e, $1d, $12, $15, $1c, $24, $15, $18, $15, $45, $fe ; utils lol)
 	
-	.db $2a, $2d, $30, $30, $2f, $33, $30, $30, $2f, $2a, $2f, $2a, $2f, $2a, $2f  ; "adggfjggfafafafa 7/31/2020"
-	.db $2a, $24, $07, $27, $03, $01, $27, $02, $00, $02, $00, $ff
+	.db $0a, $0d, $10, $10, $0f, $13, $10, $10, $0f, $0a, $0f, $0a, $0f, $0a, $0f  ; "adggfjggfafafafa 7/31/2020"
+	.db $0a, $24, $07, $27, $03, $01, $27, $02, $00, $02, $00, $ff
 
 Song:
 	.db $7f, $20, $02, $25, $0c ; fantasia in funk
