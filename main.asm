@@ -7,6 +7,8 @@
 globalTick .rs 1 ; For everything
 stringPtr  .rs 2 ; Where's the string we're rendering
 strPPUAddress .rs 2 ; What address will the string go to in the ppu
+currentMapByte .rs 1 ; what byte is being parsed of the map right now
+teste .rs 1 ; my trusty logger
 
 ;----- first 8k bank of PRG-ROM    
     .bank 0
@@ -92,37 +94,10 @@ paletteLoop:
 	cpx #$20
 	bne paletteLoop
 	
-loadBG:
-	lda $2002
-	lda #$20
-	sta $2006
-	lda #$00
-	sta $2006
-	ldx #$00
-BGLoop:
-	lda #$42 ; 42 is just a stripey tile pattern ,lel
-	sta $2007
-	sta $2007
-	sta $2007
-	sta $2007
-	inx
-	cpx #$f0
-	bne BGLoop ; Fills the whole screen with stripes
+	jsr clearScreen
+	;jsr drawMap
 	
-loadAttr:
-	lda $2002   
-	lda #$23
-	sta $2006   
-	lda #$C0
-	sta $2006   
-	ldx #$00
-attrLoop:
-	lda #$00 ; They're all zero! all of them! yay!
-	sta $2007 
-	inx
-	cpx #$80
-	bne attrLoop
-	
+	jmp StringTest
 	ldx #$00 ; Cute little test sprite!
 SpriteTest:
 	lda PlayerSpriteData, x
@@ -142,7 +117,14 @@ StringTest:
     lda #HIGH(text_EngineTitle)
     sta stringPtr+1
 	
-	jsr drawString
+	;jsr drawString
+	ldx #$01
+	ldy #$01
+	jsr drawTile
+	
+	ldx #$02
+	ldy #$02
+	jsr drawTile
 	
 EndInit:
 	lda #$90
@@ -161,6 +143,177 @@ EndInit:
 	
 forever:
     jmp forever
+
+; no arguments, fills the first nametable with 24 (blank blue character)	
+clearScreen:
+	lda $2002
+	lda #$20
+	sta $2006
+	lda #$00
+	sta $2006
+	
+	ldx #$00
+BGLoop:
+	lda #$24 ; blank blue tile
+	sta $2007
+	sta $2007
+	sta $2007
+	sta $2007
+	inx
+	cpx #$ff
+	bne BGLoop 
+	
+loadAttr:
+	lda $2002   
+	lda #$23
+	sta $2006   
+	lda #$C0
+	sta $2006   
+	ldx #$00
+attrLoop:
+	lda #$00 ; all the first palette
+	sta $2007 
+	inx
+	cpx #$80
+	bne attrLoop
+	
+	rts
+
+; x and y in x and y	
+drawTile:
+	txa
+	asl a ; x multiplied by 0x02
+	tax
+	
+	lda #$00
+	sta strPPUAddress
+	sty strPPUAddress + 1
+	
+	asl strPPUAddress + 1 ; y multiplied by 0x40
+	rol strPPUAddress
+	asl strPPUAddress + 1
+	rol strPPUAddress 
+	asl strPPUAddress + 1 
+	rol strPPUAddress
+	asl strPPUAddress + 1
+	rol strPPUAddress 
+	asl strPPUAddress + 1
+	rol strPPUAddress 
+	asl strPPUAddress + 1
+	rol strPPUAddress 
+	
+	clc ; x and y are added together
+	txa
+	adc strPPUAddress + 1
+	sta strPPUAddress + 1
+	bcc addDone
+	inc strPPUAddress
+addDone:
+	
+	clc	; the sum of x and y are added to the value $20c0 which is the top part of the map screen
+	lda strPPUAddress + 1
+	adc #$c0
+	sta strPPUAddress + 1	
+	lda strPPUAddress
+	adc #$20			
+	sta strPPUAddress
+	
+drawTileTop:
+	lda $2002
+	lda strPPUAddress
+	sta $2006
+	lda strPPUAddress + 1
+	sta $2006	
+	
+	ldy #$04
+	
+	lda MetaTiles, y
+	sta $2007
+	iny
+	lda MetaTiles, y
+	sta $2007
+	iny
+	
+	clc ; go down a row
+	lda strPPUAddress + 1
+	adc #$20
+	sta strPPUAddress + 1
+	
+	bcc drawTileBottom
+	inc strPPUAddress
+	
+drawTileBottom:
+	lda $2002
+	lda strPPUAddress
+	sta $2006
+	lda strPPUAddress + 1
+	sta $2006	
+
+	lda MetaTiles, y
+	sta $2007
+	iny
+	lda MetaTiles, y
+	sta $2007
+	iny
+	
+	rts
+	
+; no arguments, draws the entire map
+drawMap:
+	lda #$20
+	sta strPPUAddress
+	lda #$c0
+	sta strPPUAddress + 1
+
+	ldx #$00
+mapByteLoop:
+	
+	lda MapData, x
+	sta currentMapByte
+	
+	and #%11000000
+	lsr a 
+	lsr a
+	lsr a 
+	lsr a
+	lsr a
+	lsr a
+	clc
+	asl a
+	asl a
+	sta teste
+	tay
+	
+tileTopRender:
+
+	lda $2002
+	lda strPPUAddress
+	sta $2006
+	lda strPPUAddress + 1
+	sta $2006	
+	
+	lda MetaTiles, y
+	sta $2007
+	iny
+	lda MetaTiles, y
+	sta $2007
+	
+tileBottomRender:	
+	clc
+	lda strPPUAddress + 1
+	adc #$40
+	sta strPPUAddress + 1
+	
+	bcc tileBottomRenderDone
+	inc strPPUAddress
+	
+tileBottomRenderDone:
+	
+	inx
+	cpx #$04
+	bne mapByteLoop
+	
+	rts
 	
 ; drawString works like this: you set stringPtr and strPPUAddress
 ; before you call this subroutine. As long as you do that, you're good to go!
@@ -211,6 +364,15 @@ drawStringDone:
 ;----- second 8k bank of PRG-ROM    
     .bank 1
     .org $E000
+	
+MetaTiles:
+	.db $43, $43, $43, $43
+	.db $60, $61, $70, $71
+	.db $40, $40, $40, $40
+	.db $42, $42, $42, $42
+	
+MapData:
+	.db %01100110, %00100110, %01100110, %00100110
 	
 PlayerSpriteData:
 	.db $80, $00, $00, $80
