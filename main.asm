@@ -12,7 +12,7 @@ globalTick .rs 1 ; For everything
 stringPtr  .rs 2 ; Where's the string we're rendering
 strPPUAddress .rs 2 ; What address will the string go to in the ppu
 currentMapByte .rs 1 ; what byte is being parsed of the map right now
-teste .rs 1 ; my trusty logger
+teste .rs 2 ; my trusty logger
 
 ;----- first 8k bank of PRG-ROM    
     .bank 0
@@ -23,22 +23,6 @@ teste .rs 1 ; my trusty logger
     
 irq:
 nmi:
-	
-BlinkAnim:	;; Silly blink animation test
-	lda #$00
-	sta $0201 ; 201 and 205 are the addresses of the two tile index bytes of the head sprites
-	sta $0205
-	
-	lda globalTick
-	and #%00111111 ; Blinks every 64 frames for 8 frames
-	cmp #$08
-	bcs BlinkAnimDone
-	
-	lda #$01
-	sta $0201
-	sta $0205
-	
-BlinkAnimDone:
 
 	lda #%10010000   ; enable NMI, sprites from Pattern Table 0, background from Pattern Table 1
 	sta $2000
@@ -113,7 +97,7 @@ SpriteTest:
 StringTest:
 	lda #$20
 	sta strPPUAddress
-	lda #$c3
+	lda #$60
 	sta strPPUAddress + 1
 	
 	lda #LOW(text_EngineTitle)
@@ -121,7 +105,7 @@ StringTest:
     lda #HIGH(text_EngineTitle)
     sta stringPtr+1
 	
-	;jsr drawString
+	jsr drawString
 	
 	;lda #$00
 	;sta param1
@@ -203,7 +187,7 @@ drawTile:
 	lda param3
 	sta strPPUAddress + 1
 	
-	asl strPPUAddress + 1 ; y multiplied by 0x40
+	asl strPPUAddress + 1 ; y multiplied by 0x40 (16 bit left shift six times)
 	rol strPPUAddress
 	asl strPPUAddress + 1
 	rol strPPUAddress 
@@ -214,7 +198,14 @@ drawTile:
 	asl strPPUAddress + 1
 	rol strPPUAddress 
 	asl strPPUAddress + 1
-	rol strPPUAddress 
+	rol strPPUAddress
+	
+	;lda strPPUAddress + 1
+	
+	;lda strPPUAddress
+	;sta teste
+	;lda strPPUAddress + 1
+	;sta teste + 1
 	
 	clc ; x and y are added together
 	lda param2
@@ -228,6 +219,7 @@ addDone:
 	lda strPPUAddress + 1
 	adc #$c0
 	sta strPPUAddress + 1	
+	
 	lda strPPUAddress
 	adc #$20			
 	sta strPPUAddress
@@ -278,10 +270,6 @@ drawTileDone:
 	
 ; no arguments, draws the entire map
 drawMap:
-	lda #$20
-	sta strPPUAddress
-	lda #$c0
-	sta strPPUAddress + 1
 
 	ldx #$00
 mapByteLoop:
@@ -291,7 +279,7 @@ mapByteLoop:
 	sta param1
 	
 	txa ; x coordinate (modulo 16)
-	and #%00011111
+	and #%00001111
 	sta param2
 	
 	txa ; y coordinate (divided by 16 and floored)
@@ -304,7 +292,7 @@ mapByteLoop:
 	jsr drawTile
 	
 	inx
-	cpx #$10
+	cpx #$c0
 	bne mapByteLoop
 	
 	rts
@@ -367,7 +355,18 @@ MetaTiles:
 	
 MapData:
 	;.db %01100110, %00100110, %01100110, %00100110
-	.db $01, $02, $03, $03, $01, $02, $03, $03, $01, $02, $03, $03, $01, $02, $03, $03
+	.db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+	.db $00, $00, $00, $02, $02, $00, $00, $00, $02, $00, $00, $00, $00, $00, $00, $00
+	.db $00, $00, $02, $02, $02, $02, $02, $02, $02, $02, $02, $00, $00, $00, $00, $00
+	.db $00, $00, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $00, $00, $00
+	.db $00, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $00, $00
+	.db $00, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $00
+	.db $00, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $00
+	.db $00, $00, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $00
+	.db $00, $00, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $00, $00, $00
+	.db $00, $00, $00, $02, $02, $02, $02, $02, $00, $00, $02, $02, $00, $00, $00, $00
+	.db $00, $00, $00, $00, $02, $02, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+	.db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 	
 PlayerSpriteData:
 	.db $80, $00, $00, $80
@@ -377,19 +376,14 @@ PlayerSpriteData:
 	
 BackgroundPalette:
 	.db $2a, $30, $11, $1a, $2a, $06, $0a, $1a, $2a, $15, $27, $30, $2a, $13, $24, $30 ; bg
-	.db $2b, $15, $27, $30, $04, $14, $24, $34, $04, $14, $24, $34, $04, $14, $24, $34 ; sprites
+	.db $2a, $15, $27, $30, $2a, $14, $24, $34, $2a, $14, $24, $34, $2a, $14, $24, $34 ; sprites
 	
 text_TheLicc:
 	.db $1d, $31, $2e, $24, $15, $32, $2c, $2c, $ff ; "THE LICC"
 	
-text_EngineTitle:
-	.db $0f, $0a, $16, $12, $1d, $18, $17, $0e, $24, $1d, $0e, $1c, $1d, $fe ; famitone test 
-	
-	.db $44, $0a, $17, $0d, $24, $18, $1d, $11, $0e, $1b, $24 ; (and other 
-	.db $1e, $1d, $12, $15, $1c, $24, $15, $18, $15, $45, $fe ; utils lol)
-	
+text_EngineTitle:	
 	.db $0a, $0d, $10, $10, $0f, $13, $10, $10, $0f, $0a, $0f, $0a, $0f, $0a, $0f  ; "adggfjggfafafafa 7/31/2020"
-	.db $0a, $24, $07, $27, $03, $01, $27, $02, $00, $02, $00, $ff
+	.db $0a, $24, $08, $27, $04, $27, $02, $00, $02, $00, $ff
 
 Song:
 	.db $7f, $20, $02, $25, $0c ; fantasia in funk
