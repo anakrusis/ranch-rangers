@@ -4,6 +4,10 @@
     .inesmir 1 ;background mirroring (vertical mirroring = horizontal scrolling)
 
 	.rsset $0000
+param1 .rs 1 ; parameters for functions when you cant use a register
+param2 .rs 1
+param3 .rs 1
+	
 globalTick .rs 1 ; For everything
 stringPtr  .rs 2 ; Where's the string we're rendering
 strPPUAddress .rs 2 ; What address will the string go to in the ppu
@@ -118,13 +122,21 @@ StringTest:
     sta stringPtr+1
 	
 	;jsr drawString
-	ldx #$01
-	ldy #$01
-	jsr drawTile
 	
-	ldx #$02
-	ldy #$02
-	jsr drawTile
+	;lda #$00
+	;sta param1
+	;sta param2
+	;sta param3
+	;jsr drawTile
+	
+	;lda #$01
+	;sta param1
+	;sta param2
+	;sta param3
+	;jsr drawTile
+	
+	jsr drawMap
+	
 	
 EndInit:
 	lda #$90
@@ -179,15 +191,17 @@ attrLoop:
 	
 	rts
 
-; x and y in x and y	
+; tile type in param1, X and Y position of tile in param2 and param3
+; you should only call this during vblank or while bulk drawing with ppu off
 drawTile:
-	txa
+	lda param2
 	asl a ; x multiplied by 0x02
-	tax
+	sta param2
 	
 	lda #$00
 	sta strPPUAddress
-	sty strPPUAddress + 1
+	lda param3
+	sta strPPUAddress + 1
 	
 	asl strPPUAddress + 1 ; y multiplied by 0x40
 	rol strPPUAddress
@@ -203,7 +217,7 @@ drawTile:
 	rol strPPUAddress 
 	
 	clc ; x and y are added together
-	txa
+	lda param2
 	adc strPPUAddress + 1
 	sta strPPUAddress + 1
 	bcc addDone
@@ -225,7 +239,10 @@ drawTileTop:
 	lda strPPUAddress + 1
 	sta $2006	
 	
-	ldy #$04
+	lda param1
+	asl a
+	asl a
+	tay
 	
 	lda MetaTiles, y
 	sta $2007
@@ -256,6 +273,7 @@ drawTileBottom:
 	sta $2007
 	iny
 	
+drawTileDone:
 	rts
 	
 ; no arguments, draws the entire map
@@ -270,47 +288,23 @@ mapByteLoop:
 	
 	lda MapData, x
 	sta currentMapByte
+	sta param1
 	
-	and #%11000000
-	lsr a 
+	txa ; x coordinate (modulo 16)
+	and #%00011111
+	sta param2
+	
+	txa ; y coordinate (divided by 16 and floored)
 	lsr a
-	lsr a 
 	lsr a
 	lsr a
 	lsr a
-	clc
-	asl a
-	asl a
-	sta teste
-	tay
+	sta param3
 	
-tileTopRender:
-
-	lda $2002
-	lda strPPUAddress
-	sta $2006
-	lda strPPUAddress + 1
-	sta $2006	
-	
-	lda MetaTiles, y
-	sta $2007
-	iny
-	lda MetaTiles, y
-	sta $2007
-	
-tileBottomRender:	
-	clc
-	lda strPPUAddress + 1
-	adc #$40
-	sta strPPUAddress + 1
-	
-	bcc tileBottomRenderDone
-	inc strPPUAddress
-	
-tileBottomRenderDone:
+	jsr drawTile
 	
 	inx
-	cpx #$04
+	cpx #$10
 	bne mapByteLoop
 	
 	rts
@@ -372,7 +366,8 @@ MetaTiles:
 	.db $42, $42, $42, $42
 	
 MapData:
-	.db %01100110, %00100110, %01100110, %00100110
+	;.db %01100110, %00100110, %01100110, %00100110
+	.db $01, $02, $03, $03, $01, $02, $03, $03, $01, $02, $03, $03, $01, $02, $03, $03
 	
 PlayerSpriteData:
 	.db $80, $00, $00, $80
