@@ -1,3 +1,6 @@
+JOYPAD1 = $4016
+JOYPAD2 = $4017
+
     .inesprg 1 ;1x 16kb PRG code
     .ineschr 1 ;1x 8kb CHR data
     .inesmap 0 ; mapper 0 = NROM, no bank swapping
@@ -12,7 +15,19 @@ globalTick .rs 1 ; For everything
 stringPtr  .rs 2 ; Where's the string we're rendering
 strPPUAddress .rs 2 ; What address will the string go to in the ppu
 currentMapByte .rs 1 ; what byte is being parsed of the map right now
-teste .rs 2 ; my trusty logger
+teste .rs 2 ; my trusty logger. Now it's a big boy and it can log pointers too.
+cursorX .rs 1
+cursorY .rs 1
+
+buttons1 .rs 1
+buttons2 .rs 1
+
+	.rsset $0100
+tileBufferLength .rs 1
+tileBuffer .rs 64
+
+	.rsset $0400
+MapData .rs 192 ; the whole mapa xD
 
 ;----- first 8k bank of PRG-ROM    
     .bank 0
@@ -23,6 +38,30 @@ teste .rs 2 ; my trusty logger
     
 irq:
 nmi:
+	lda cursorX ; set cursor x position on screen (will be made better soon)
+	asl a
+	asl a
+	asl a
+	asl a
+	sta $0203
+	sta $020b
+	clc
+	adc #$08
+	sta $0207
+	sta $020f
+	
+	lda cursorY
+	adc #$03 ; 3 metatiles make up the hotbar so the positions are offset by 3
+	asl a
+	asl a
+	asl a
+	asl a
+	sta $0200
+	sta $0204
+	clc
+	adc #$08
+	sta $0208
+	sta $020c
 
 	lda #%10010000   ; enable NMI, sprites from Pattern Table 0, background from Pattern Table 1
 	sta $2000
@@ -37,8 +76,77 @@ nmi:
 	lda #$02
 	sta $4014 ; oam dma
 
-	jsr FamiToneUpdate
+ReadControllers:
+    lda #$01
+    sta JOYPAD1
+    sta buttons2  ; player 2's buttons double as a ring counter
+    lsr a         ; now A is 0
+    sta JOYPAD1
+ReadControllerLoop:
+    lda JOYPAD1
+    and #%00000011  ; ignore bits other than controller
+    cmp #$01        ; Set carry if and only if nonzero
+    rol buttons1    ; Carry -> bit 0; bit 7 -> Carry
+    lda JOYPAD2     ; Repeat
+    and #%00000011
+    cmp #$01
+    rol buttons2    ; Carry -> bit 0; bit 7 -> Carry
+    bcc ReadControllerLoop
 	
+InputHandler:
+	lda globalTick
+	and #$03
+	cmp #$00
+	bne InputHandlerDone
+
+InputRight:
+	lda buttons1
+	and #$01
+	cmp #$01
+	bne InputRightDone
+	inc cursorX
+	lda cursorX
+	and #$0f
+	sta cursorX
+InputRightDone:
+InputLeft:
+	lda buttons1
+	and #$02
+	cmp #$02
+	bne InputLeftDone
+	dec cursorX
+	lda cursorX
+	and #$0f
+	sta cursorX
+InputLeftDone:
+InputUp:
+	lda buttons1
+	and #$08
+	cmp #$08
+	bne InputUpDone
+	dec cursorY
+	lda cursorY
+	cmp #$0c
+	bcc InputUpDone
+	lda #$0b
+	sta cursorY
+InputUpDone:
+InputDown:
+	lda buttons1
+	and #$04
+	cmp #$04
+	bne InputDownDone
+	inc cursorY
+	lda cursorY
+	cmp #$0c
+	bcc InputDownDone
+	lda #$00
+	sta cursorY
+InputDownDone:
+
+InputHandlerDone:
+
+	jsr FamiToneUpdate
 	inc globalTick
 	
     rti
@@ -69,6 +177,7 @@ vblankwait2:
 	bit $2002
 	bpl vblankwait2
 	
+initPalette:
 	lda $2002
 	lda #$3F
 	sta $2006   
@@ -83,16 +192,14 @@ paletteLoop:
 	bne paletteLoop
 	
 	jsr clearScreen
-	;jsr drawMap
 	
-	jmp StringTest
-	ldx #$00 ; Cute little test sprite!
-SpriteTest:
-	lda PlayerSpriteData, x
+	ldx #$00
+initCursorSprite:
+	lda CursorSpriteData, x
 	sta $0200, x
 	inx
 	cpx #$10
-	bne SpriteTest
+	bne initCursorSprite
 	
 StringTest:
 	lda #$20
@@ -107,20 +214,14 @@ StringTest:
 	
 	jsr drawString
 	
-	;lda #$00
-	;sta param1
-	;sta param2
-	;sta param3
-	;jsr drawTile
-	
-	;lda #$01
-	;sta param1
-	;sta param2
-	;sta param3
-	;jsr drawTile
+	ldx #$c0
+CopyMapLoop:
+	lda testMap, x
+	sta MapData, x
+	dex
+	bne CopyMapLoop
 	
 	jsr drawMap
-	
 	
 EndInit:
 	lda #$90
@@ -347,13 +448,15 @@ drawStringDone:
     .bank 1
     .org $E000
 	
+; The first four correspond to the map tile IDs
+	
 MetaTiles:
 	.db $43, $43, $43, $43
 	.db $60, $61, $70, $71
 	.db $40, $40, $40, $40
 	.db $42, $42, $42, $42
 	
-MapData:
+testMap:
 	;.db %01100110, %00100110, %01100110, %00100110
 	.db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 	.db $00, $00, $00, $02, $02, $00, $00, $00, $02, $00, $00, $00, $00, $00, $00, $00
@@ -368,11 +471,11 @@ MapData:
 	.db $00, $00, $00, $00, $02, $02, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 	.db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 	
-PlayerSpriteData:
-	.db $80, $00, $00, $80
-	.db $80, $00, $40, $88  
-	.db $88, $11, $00, $80 
-	.db $88, $11, $40, $88 
+CursorSpriteData:
+	.db $00, $80, %00000011, $00
+	.db $00, $80, %01000011, $08  
+	.db $08, $80, %10000011, $00 
+	.db $08, $80, %11000011, $08 
 	
 BackgroundPalette:
 	.db $2a, $30, $11, $1a, $2a, $06, $0a, $1a, $2a, $15, $27, $30, $2a, $13, $24, $30 ; bg
@@ -396,20 +499,6 @@ SongNoise:
 TheLicc:
 	.db $02, $04, $05, $07 ; the licc (needs to be fixed, tempo values have yet changed)
 	.db $24, $00, $02, $5f
-	
-FreqLookupTbl:
-	.db $ab, $09, $93, $09 ; C-3, C#3  0, 1
-	.db $7c, $09, $67, $09 ; D-3, D#3  2, 3
-	.db $52, $09, $3f, $09 ; E-3, F-3  4, 5
-	.db $2d, $09, $1c, $09 ; F#3, G-3  6, 7
-	.db $0c, $09, $fd, $08 ; G#3, A-3  8, 9
-	.db $ef, $08, $e1, $08 ; A#3, B-3  a, b
-	.db $d5, $08, $c9, $08 ; C-4, C#4  c, d
-	.db $bd, $08, $00, $00 ; D-4, D#4  e, f
-	.db $a9, $08, $9f, $08 ; E-4, F-4  10,11
-	
-NoteLenLookupTbl:
-	.db $06, $0a, $10, $20 ; 1 and 0 together make swung eight notes, 2 a quarter note, and 3 is a half note
 	
 ;---- vectors
     .org $FFFA     ;first of the three vectors starts here
