@@ -12,6 +12,12 @@ param2 .rs 1
 param3 .rs 1
 	
 globalTick .rs 1 ; For everything
+guiMode .rs 1 
+; guide:
+; 00 = no windows open
+; 01 = farm/unit screen
+; 02 = unit selection screen (cow, chicken)
+
 stringPtr  .rs 2 ; Where's the string we're rendering
 strPPUAddress .rs 2 ; What address will the string go to in the ppu
 currentMapByte .rs 1 ; what byte is being parsed of the map right now
@@ -29,6 +35,17 @@ tileBuffer .rs 64
 	.rsset $0400
 MapData .rs 192 ; the whole mapa xD
 
+p1PiecesX    .rs 8
+p2PiecesX    .rs 8
+p1PiecesY    .rs 8
+p2PiecesY    .rs 8
+p1PiecesType .rs 8
+p2PiecesType .rs 8
+
+	.rsset $0500
+p1UnitCount .rs 1
+p2UnitCount .rs 1
+
 ;----- first 8k bank of PRG-ROM    
     .bank 0
     .org $C000
@@ -38,7 +55,7 @@ MapData .rs 192 ; the whole mapa xD
     
 irq:
 nmi:
-	lda cursorX ; set cursor x position on screen (will be made better soon)
+	lda cursorX ; set cursor x position on screen (will be made better soon (read: without oam hardcoding))
 	asl a
 	asl a
 	asl a
@@ -76,6 +93,7 @@ nmi:
 	lda #$02
 	sta $4014 ; oam dma
 
+; This is from the nesdev wiki: http://wiki.nesdev.com/w/index.php/Controller_reading_code
 ReadControllers:
     lda #$01
     sta JOYPAD1
@@ -396,6 +414,12 @@ mapByteLoop:
 	cpx #$c0
 	bne mapByteLoop
 	
+drawUnits:
+	
+	ldx #$00
+unitDrawLoop:
+	
+	
 	rts
 	
 ; drawString works like this: you set stringPtr and strPPUAddress
@@ -449,12 +473,17 @@ drawStringDone:
     .org $E000
 	
 ; The first four correspond to the map tile IDs
-	
 MetaTiles:
-	.db $43, $43, $43, $43
-	.db $60, $61, $70, $71
-	.db $40, $40, $40, $40
-	.db $42, $42, $42, $42
+	.db $43, $43, $43, $43 ;water
+	.db $60, $61, $70, $71 ;trees
+	.db $40, $40, $40, $40 ;grass
+	.db $42, $42, $42, $42 ;farm
+	
+; the next correspond to unit IDs
+UnitMetaTiles:
+	.db $82, $83, $92, $93 ;farmer
+	.db $80, $81, $90, $91 ;chicken
+	.db $86, $87, $96, $97 ;cow(bull)
 	
 testMap:
 	;.db %01100110, %00100110, %01100110, %00100110
