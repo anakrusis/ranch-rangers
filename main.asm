@@ -51,6 +51,8 @@ JOYPAD1 = $4016
 JOYPAD2 = $4017
 MAP_DRAW_Y = $03
 
+MAX_METATILE_CHANGES = $08 ; per frame, 32 tiles per frame
+
 ;----- first 8k bank of PRG-ROM    
     .bank 0
     .org $C000
@@ -61,6 +63,27 @@ MAP_DRAW_Y = $03
 irq:
 nmi:
 TileBufferHandler:
+	ldx #$00
+TileBufferLoop:
+	stx param4
+	asl param4
+	asl param4 ; param4 has the index of the buffer item times 4, cus each one is 4 bytes
+	
+	ldy param4
+	lda tileBuffer, y
+	sta param1 ; tile id
+	
+	iny
+	lda tileBuffer, y
+	sta param2 ; tile x
+	
+	iny
+	lda tileBuffer , y
+	sta param3 ; tile y
+	
+	inx
+	cpx #MAX_METATILE_CHANGES
+	bne TileBufferLoop
 
 DrawCursor:
 	lda cursorX ; set cursor x position on screen (will be made better soon (read: without oam hardcoding))
