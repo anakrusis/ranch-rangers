@@ -1,15 +1,16 @@
-JOYPAD1 = $4016
-JOYPAD2 = $4017
-
     .inesprg 1 ;1x 16kb PRG code
     .ineschr 1 ;1x 8kb CHR data
     .inesmap 0 ; mapper 0 = NROM, no bank swapping
     .inesmir 1 ;background mirroring (vertical mirroring = horizontal scrolling)
 
 	.rsset $0000
-param1 .rs 1 ; parameters for functions when you cant use a register
+param1 .rs 1 ; local parameters for functions when you cant use a register
 param2 .rs 1
 param3 .rs 1
+param4 .rs 1
+param5 .rs 1
+param6 .rs 1
+param7 .rs 1
 	
 globalTick .rs 1 ; For everything
 guiMode .rs 1 
@@ -46,6 +47,10 @@ p2PiecesType .rs 8
 p1UnitCount .rs 1
 p2UnitCount .rs 1
 
+JOYPAD1 = $4016
+JOYPAD2 = $4017
+MAP_DRAW_Y = $03
+
 ;----- first 8k bank of PRG-ROM    
     .bank 0
     .org $C000
@@ -55,8 +60,11 @@ p2UnitCount .rs 1
     
 irq:
 nmi:
+TileBufferHandler:
+
+DrawCursor:
 	lda cursorX ; set cursor x position on screen (will be made better soon (read: without oam hardcoding))
-	asl a
+	asl a       ; multiplied by 16 (coarse)
 	asl a
 	asl a
 	asl a
@@ -68,8 +76,8 @@ nmi:
 	sta $020f
 	
 	lda cursorY
-	adc #$03 ; 3 metatiles make up the hotbar so the positions are offset by 3
-	asl a
+	adc #MAP_DRAW_Y ; position is offset by 3 metatiles by default
+	asl a           ; multiplied by 16 (coarse)
 	asl a
 	asl a
 	asl a
@@ -80,6 +88,7 @@ nmi:
 	sta $0208
 	sta $020c
 
+DrawDone:
 	lda #%10010000   ; enable NMI, sprites from Pattern Table 0, background from Pattern Table 1
 	sta $2000
 	lda #%00011110   ; enable sprites, enable background, no clipping on left side
@@ -219,19 +228,6 @@ initCursorSprite:
 	cpx #$10
 	bne initCursorSprite
 	
-StringTest:
-	lda #$20
-	sta strPPUAddress
-	lda #$60
-	sta strPPUAddress + 1
-	
-	lda #LOW(text_EngineTitle)
-    sta stringPtr
-    lda #HIGH(text_EngineTitle)
-    sta stringPtr+1
-	
-	jsr drawString
-	
 	ldx #$c0
 CopyMapLoop:
 	lda testMap, x
@@ -240,6 +236,31 @@ CopyMapLoop:
 	bne CopyMapLoop
 	
 	jsr drawMap
+	
+TextBoxTest:
+	lda #$00
+	sta param4
+	lda #$01
+	sta param5
+	lda #$10
+	sta param6
+	lda #$02
+	sta param7
+	
+	jsr drawTextBox
+	
+StringTest:
+	lda #$20
+	sta strPPUAddress
+	lda #$61
+	sta strPPUAddress + 1
+	
+	lda #LOW(text_EngineTitle)
+    sta stringPtr
+    lda #HIGH(text_EngineTitle)
+    sta stringPtr+1
+	
+	jsr drawString
 	
 EndInit:
 	lda #$90
@@ -297,6 +318,9 @@ attrLoop:
 ; tile type in param1, X and Y position of tile in param2 and param3
 ; you should only call this during vblank or while bulk drawing with ppu off
 drawTile:
+	tya ; This is Y clobber prevention so that you can keep using Y to do other things if you like.
+	pha
+
 	lda param2
 	asl a ; x multiplied by 0x02
 	sta param2
@@ -319,13 +343,6 @@ drawTile:
 	asl strPPUAddress + 1
 	rol strPPUAddress
 	
-	;lda strPPUAddress + 1
-	
-	;lda strPPUAddress
-	;sta teste
-	;lda strPPUAddress + 1
-	;sta teste + 1
-	
 	clc ; x and y are added together
 	lda param2
 	adc strPPUAddress + 1
@@ -336,7 +353,7 @@ addDone:
 	
 	clc	; the sum of x and y are added to the value $20c0 which is the top part of the map screen
 	lda strPPUAddress + 1
-	adc #$c0
+	adc #$00
 	sta strPPUAddress + 1	
 	
 	lda strPPUAddress
@@ -385,6 +402,9 @@ drawTileBottom:
 	iny
 	
 drawTileDone:
+	pla ; This is the second and concluding portion of the Y clobber prevention.
+	tay
+
 	rts
 	
 ; no arguments, draws the entire map
@@ -406,6 +426,8 @@ mapByteLoop:
 	lsr a
 	lsr a
 	lsr a
+	clc
+	adc #MAP_DRAW_Y ; 3 metatiles added on to the position of the tile because hotbar
 	sta param3
 	
 	jsr drawTile
@@ -420,6 +442,107 @@ drawUnits:
 unitDrawLoop:
 	
 	
+	rts
+	
+; this is like a bulk drawing version of something which will be done with a buffer soon
+; param4/5: x and y position
+; param6/7: width and height
+
+; param2 temporarily used as the sum of the x+plus width
+; param3 temporarily used as the sum of the y+plus height
+drawTextBox:
+
+	ldy param5
+drawTextBoxYLoop:
+
+	ldx param4
+drawTextBoxXLoop:
+
+	jsr loadTextboxTileToA
+	
+	sta param1
+	stx param2
+	sty param3
+	jsr drawTile
+	
+	lda param4 ; param2 = (x + width)
+	clc
+	adc param6
+	sta param2
+	
+	inx
+	cpx param2
+	bne drawTextBoxXLoop
+
+	lda param5 ; param3 = (y + height)
+	clc
+	adc param7
+	sta param3
+
+	iny
+	cpy param3
+	bne drawTextBoxYLoop
+	
+	rts
+	
+loadTextboxTileToA:
+	lda param4 ; param2 = (x + width)
+	clc
+	adc param6
+	sta param2
+	lda param5 ; param3 = (y + height)
+	clc
+	adc param7
+	sta param3
+
+checkX:
+	cpx param4
+	bne checkXSummed
+	
+	lda #$08
+	cpy param5
+	beq textBoxTileLoaded
+	
+	lda #$0e
+	dec param3
+	cpy param3
+	beq textBoxTileLoaded
+	
+	lda #$0b
+	jmp textBoxTileLoaded
+	
+checkXSummed:
+	dec param2 ; its evaluating (width+x)-1
+	lda param2
+	sta teste
+	cpx param2
+	bne checkXOther
+	
+	lda #$0a
+	cpy param5
+	beq textBoxTileLoaded
+	
+	lda #$10
+	dec param3
+	cpy param3
+	beq textBoxTileLoaded
+	
+	lda #$0d
+	jmp textBoxTileLoaded
+	
+checkXOther:
+	lda #$09
+	cpy param5
+	beq textBoxTileLoaded
+	
+	lda #$0f
+	dec param3
+	cpy param3
+	beq textBoxTileLoaded
+	
+	lda #$0c
+	
+textBoxTileLoaded:	
 	rts
 	
 ; drawString works like this: you set stringPtr and strPPUAddress
@@ -484,18 +607,30 @@ UnitMetaTiles:
 	.db $82, $83, $92, $93 ;farmer
 	.db $80, $81, $90, $91 ;chicken
 	.db $86, $87, $96, $97 ;cow(bull)
+	.db $00, $00, $00, $00 ;reserved
+	
+TextBoxMetaTiles:
+	.db $29, $2a, $39, $24 ; top left corner
+	.db $2a, $2a, $24, $24 ; top side
+	.db $2a, $2b, $24, $39 ; top right corner
+	.db $39, $24, $39, $24 ; left side
+	.db $24, $24, $24, $24 ; middle
+	.db $24, $39, $24, $39 ; right side
+	.db $39, $24, $3a, $2a ; bottom left corner
+	.db $24, $24, $2a, $2a ; bottom side
+	.db $24, $39, $2a, $3b ; bottom right corner
 	
 testMap:
 	;.db %01100110, %00100110, %01100110, %00100110
 	.db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 	.db $00, $00, $00, $02, $02, $00, $00, $00, $02, $00, $00, $00, $00, $00, $00, $00
 	.db $00, $00, $02, $02, $02, $02, $02, $02, $02, $02, $02, $00, $00, $00, $00, $00
-	.db $00, $00, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $00, $00, $00
-	.db $00, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $00, $00
+	.db $00, $00, $02, $02, $02, $02, $01, $02, $02, $02, $02, $02, $02, $00, $00, $00
+	.db $00, $02, $02, $02, $02, $02, $02, $01, $02, $02, $02, $02, $02, $02, $00, $00
 	.db $00, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $00
 	.db $00, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $00
 	.db $00, $00, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $00
-	.db $00, $00, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $00, $00, $00
+	.db $00, $00, $02, $02, $02, $02, $02, $02, $02, $02, $01, $02, $02, $00, $00, $00
 	.db $00, $00, $00, $02, $02, $02, $02, $02, $00, $00, $02, $02, $00, $00, $00, $00
 	.db $00, $00, $00, $00, $02, $02, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 	.db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
@@ -514,8 +649,7 @@ text_TheLicc:
 	.db $1d, $31, $2e, $24, $15, $32, $2c, $2c, $ff ; "THE LICC"
 	
 text_EngineTitle:	
-	.db $0a, $0d, $10, $10, $0f, $13, $10, $10, $0f, $0a, $0f, $0a, $0f, $0a, $0f  ; "adggfjggfafafafa 7/31/2020"
-	.db $0a, $24, $08, $27, $04, $27, $02, $00, $02, $00, $ff
+	.db $0f, $0a, $1b, $16, $24, $08, $27, $06, $27, $02, $00, $02, $00, $ff ; farm 8/6/2020
 
 Song:
 	.db $7f, $20, $02, $25, $0c ; fantasia in funk
