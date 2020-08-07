@@ -51,7 +51,7 @@ JOYPAD1 = $4016
 JOYPAD2 = $4017
 MAP_DRAW_Y = $03
 
-MAX_METATILE_CHANGES = $01 ; per frame, 32 tiles per frame
+MAX_METATILE_CHANGES = $04 ; per frame, 32 tiles per frame
 
 ;----- first 8k bank of PRG-ROM    
     .bank 0
@@ -65,11 +65,12 @@ nmi:
 	
 TileBufferHandler:
 
-	ldx #$00
+	ldx #$00 ; empty buffer means skip tile buffer handling
 	cpx tileBufferLength
 	beq TileBufferHandlerDone
 	
 TileBufferLoop:
+
 	stx param4
 	asl param4
 	asl param4 ; param4 has the index of the buffer item times 4, cus each one is 4 bytes
@@ -88,12 +89,26 @@ TileBufferLoop:
 	
 	jsr drawTile
 	
+	inx
+	
+	; compares the buffer length to the max per frame.
+	lda tileBufferLength
+	cmp #MAX_METATILE_CHANGES
+	bcc compareBufferLength
+	
+	cpx #MAX_METATILE_CHANGES ; if the tile buffer is bigger, then we have to shift the remainder of items over
+	bne TileBufferLoop        ; once the loop is finished.
+	jmp TileBufferShiftItems
+	
+compareBufferLength:          ; if the tile buffer is smaller, then we simply clear it to zero after the loop finishes.
+	cpx tileBufferLength      ; in this case we can iterate through every item in the buffer in one frame.
+	bne TileBufferLoop
 	lda #$00
 	sta tileBufferLength
+	jmp TileBufferHandlerDone
 	
-	inx
-	cpx #MAX_METATILE_CHANGES
-	bne TileBufferLoop
+TileBufferShiftItems:
+	
 	
 TileBufferHandlerDone:
 
@@ -459,7 +474,7 @@ drawTileDone:
 
 	rts
 	
-; no arguments, draws the entire map
+; no arguments, draws the entire map (bulk drawing only! this is far too much to fit in vblank!)
 drawMap:
 
 	ldx #$00
@@ -511,11 +526,34 @@ drawTextBoxYLoop:
 drawTextBoxXLoop:
 
 	jsr loadTextboxTileToA
+	sta param1 ; param1 holds the tiletype for now, which was previously loaded into A
+	stx param2 ; param2 holds the x position for a little while, since X is occupied
 	
-	sta param1
-	stx param2
-	sty param3
-	jsr drawTile
+	;sta param1 ; these lines uncommented would produce a bulk drawing result.
+	;stx param2 ; maybe in the future there can be an additional parameter to switch between
+	;sty param3 ; buffered textbox drawing and bulk textbox drawing. that would be pretty cool.
+	;jsr drawTile
+	
+	txa ; x is temporarily used for indexing the tile buffer
+	pha
+	
+	lda tileBufferLength ; bufferlength * 4 is the start position of the new item in the buffer to place
+	asl a
+	asl a
+	tax 
+	lda param1
+	sta tileBuffer, x ; tiletype stored in param1 for now
+	inx
+	lda param2
+	sta tileBuffer, x ; x value stored in param2 for now 
+	inx
+	tya
+	sta tileBuffer, x ; y value directly stored in Y
+	
+	inc tileBufferLength
+	
+	pla ; the old x returns
+	tax
 	
 	lda param4 ; param2 = (x + width)
 	clc
