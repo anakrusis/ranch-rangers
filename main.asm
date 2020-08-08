@@ -108,8 +108,39 @@ compareBufferLength:          ; if the tile buffer is smaller, then we simply cl
 	jmp TileBufferHandlerDone
 	
 TileBufferShiftItems:
+	ldx #MAX_METATILE_CHANGES
+TileBufferShiftItemsLoop:
+
+	; txa
+	; asl a
+	; asl a ;Y will have the index of the buffer item times 4, cus each one is 4 bytes
+	; tay
 	
+	; lda tileBuffer, y
+	; sta param1 ; temporarily store the actual data byte
+	; sty param2 ; and the 4 times multiplied relative pointer
 	
+	; lda #MAX_METATILE_CHANGES ; this one will also be 4 times multiplied
+	; asl a
+	; asl a
+	; sta param3
+	
+	; lda param2 ; (counter * 4)-(max metatile changes * 4)
+	; sec
+	; sbc param3
+	; tay
+	; sta tileBuffer, y ; back to y for relative indexing to the new lower index
+	
+	; inx
+	; cpx tileBufferLength
+	; bne TileBufferShiftItemsLoop
+	
+TileBufferShiftItemsDone:	
+	lda tileBufferLength
+	sec
+	sbc #MAX_METATILE_CHANGES
+	sta tileBufferLength
+
 TileBufferHandlerDone:
 
 DrawCursor:
@@ -739,7 +770,7 @@ text_TheLicc:
 	.db $1d, $31, $2e, $24, $15, $32, $2c, $2c, $ff ; "THE LICC"
 	
 text_EngineTitle:	
-	.db $0f, $0a, $1b, $16, $24, $08, $27, $06, $27, $02, $00, $02, $00, $ff ; farm 8/6/2020
+	.db $0f, $0a, $1b, $16, $24, $08, $27, $08, $27, $02, $00, $02, $00, $ff ; farm 8/6/2020
 
 Song:
 	.db $7f, $20, $02, $25, $0c ; fantasia in funk
