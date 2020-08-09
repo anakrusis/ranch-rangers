@@ -31,6 +31,7 @@ buttons2 .rs 1
 
 	.rsset $0100
 tileBufferLength .rs 1
+tileBufferIndex  .rs 1
 tileBuffer .rs 64
 
 	.rsset $0400
@@ -69,6 +70,12 @@ TileBufferHandler:
 	cpx tileBufferLength
 	beq TileBufferHandlerDone
 	
+	lda tileBufferIndex ;param5 is pointer+max metatile changes
+	clc
+	adc #MAX_METATILE_CHANGES
+	sta param5
+	
+	ldx tileBufferIndex
 TileBufferLoop:
 
 	stx param4
@@ -88,28 +95,43 @@ TileBufferLoop:
 	sta param3 ; tile y
 	
 	jsr drawTile
-	
+
 	inx
+	inc tileBufferIndex
 	
-	; compares the buffer length to the max per frame.
-	lda tileBufferLength
-	cmp #MAX_METATILE_CHANGES
-	bcc compareBufferLength
+	cpx tileBufferLength
+	bcs TileBufferResetPointer
 	
-	cpx #MAX_METATILE_CHANGES ; if the tile buffer is bigger, then we have to shift the remainder of items over
-	bne TileBufferLoop        ; once the loop is finished.
-	jmp TileBufferShiftItems
-	
-compareBufferLength:          ; if the tile buffer is smaller, then we simply clear it to zero after the loop finishes.
-	cpx tileBufferLength      ; in this case we can iterate through every item in the buffer in one frame.
+	cpx param5
 	bne TileBufferLoop
-	lda #$00
-	sta tileBufferLength
 	jmp TileBufferHandlerDone
 	
-TileBufferShiftItems:
-	ldx #MAX_METATILE_CHANGES
-TileBufferShiftItemsLoop:
+TileBufferResetPointer:
+	lda #$00
+	sta tileBufferLength
+	sta tileBufferIndex
+	
+	; inx
+	
+	; compares the buffer length to the max per frame.
+	;lda tileBufferLength
+	;cmp #MAX_METATILE_CHANGES
+	;bcc compareBufferLength
+	
+	;cpx #MAX_METATILE_CHANGES ; if the tile buffer is bigger, then we have to shift the remainder of items over
+	;bne TileBufferLoop        ; once the loop is finished.
+	;jmp TileBufferShiftItems
+	
+;compareBufferLength:          ; if the tile buffer is smaller, then we simply clear it to zero after the loop finishes.
+	;cpx tileBufferLength      ; in this case we can iterate through every item in the buffer in one frame.
+	;bne TileBufferLoop
+	;lda #$00
+	;sta tileBufferLength
+	;jmp TileBufferHandlerDone
+	
+;TileBufferShiftItems:
+	;ldx #MAX_METATILE_CHANGES
+;TileBufferShiftItemsLoop:
 
 	; txa
 	; asl a
@@ -135,11 +157,8 @@ TileBufferShiftItemsLoop:
 	; cpx tileBufferLength
 	; bne TileBufferShiftItemsLoop
 	
-TileBufferShiftItemsDone:	
-	lda tileBufferLength
-	sec
-	sbc #MAX_METATILE_CHANGES
-	sta tileBufferLength
+;TileBufferShiftItemsDone:	
+	;inc tileBufferPointer
 
 TileBufferHandlerDone:
 
