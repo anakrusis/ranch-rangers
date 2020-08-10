@@ -21,7 +21,10 @@ guiMode .rs 1
 
 stringPtr  .rs 2 ; Where's the string we're rendering
 strPPUAddress .rs 2 ; What address will the string go to in the ppu
+
 currentMapByte .rs 1 ; what byte is being parsed of the map right now
+tilePPUAddress .rs 2 ; ditto as above but for tile changes
+
 teste .rs 2 ; my trusty logger. Now it's a big boy and it can log pointers too.
 cursorX .rs 1
 cursorY .rs 1
@@ -57,9 +60,6 @@ MAX_METATILE_CHANGES = $04 ; per frame, 32 tiles per frame
 ;----- first 8k bank of PRG-ROM    
     .bank 0
     .org $C000
-	
-	.include "song.asm"
-	.include "famitone4.asm" ; Sound engine
     
 irq:
 nmi:
@@ -95,7 +95,13 @@ TileBufferLoop:
 	sta param3 ; tile y
 	
 	jsr drawTile
+	
+	lda param1
+	cmp #$10 ; the bottom right corner tile (last to be added to the buffer for text boxes) triggers the text write)
+	bne NoTextDraw
+	jsr drawString
 
+NoTextDraw:
 	inx
 	inc tileBufferIndex
 	
@@ -111,55 +117,6 @@ TileBufferResetPointer:
 	sta tileBufferLength
 	sta tileBufferIndex
 	
-	; inx
-	
-	; compares the buffer length to the max per frame.
-	;lda tileBufferLength
-	;cmp #MAX_METATILE_CHANGES
-	;bcc compareBufferLength
-	
-	;cpx #MAX_METATILE_CHANGES ; if the tile buffer is bigger, then we have to shift the remainder of items over
-	;bne TileBufferLoop        ; once the loop is finished.
-	;jmp TileBufferShiftItems
-	
-;compareBufferLength:          ; if the tile buffer is smaller, then we simply clear it to zero after the loop finishes.
-	;cpx tileBufferLength      ; in this case we can iterate through every item in the buffer in one frame.
-	;bne TileBufferLoop
-	;lda #$00
-	;sta tileBufferLength
-	;jmp TileBufferHandlerDone
-	
-;TileBufferShiftItems:
-	;ldx #MAX_METATILE_CHANGES
-;TileBufferShiftItemsLoop:
-
-	; txa
-	; asl a
-	; asl a ;Y will have the index of the buffer item times 4, cus each one is 4 bytes
-	; tay
-	
-	; lda tileBuffer, y
-	; sta param1 ; temporarily store the actual data byte
-	; sty param2 ; and the 4 times multiplied relative pointer
-	
-	; lda #MAX_METATILE_CHANGES ; this one will also be 4 times multiplied
-	; asl a
-	; asl a
-	; sta param3
-	
-	; lda param2 ; (counter * 4)-(max metatile changes * 4)
-	; sec
-	; sbc param3
-	; tay
-	; sta tileBuffer, y ; back to y for relative indexing to the new lower index
-	
-	; inx
-	; cpx tileBufferLength
-	; bne TileBufferShiftItemsLoop
-	
-;TileBufferShiftItemsDone:	
-	;inc tileBufferPointer
-
 TileBufferHandlerDone:
 
 DrawCursor:
@@ -224,23 +181,65 @@ InputHandler:
 	lda globalTick
 	and #$03
 	cmp #$00
-	bne InputHandlerDone
+	beq InputB
+	jmp InputHandlerDone
+	
+InputB:
+	lda buttons1
+	and #$40
+	cmp #$40
+	bne InputBDone
+	
+	lda tileBufferLength
+	cmp #$00
+	bne InputBDone
+	
+	lda #$05
+	sta param4
+	sta param5
+	sta param6
+	sta param7
+	jsr drawMapChunk
 
+InputBDone:
 InputA:
 	lda buttons1
 	and #$80
 	cmp #$80
 	bne InputADone
-	lda #$03
-	sta tileBuffer
-	lda #$01
-	sta tileBufferLength
-	lda cursorX
-	sta tileBuffer + 1
-	lda cursorY
-	clc
-	adc #$03
-	sta tileBuffer + 2
+	
+	lda tileBufferLength
+	cmp #$00
+	bne InputADone
+	
+	lda #$05
+	sta param4
+	sta param5
+	sta param6
+	sta param7
+	jsr drawTextBox
+	
+	lda #$21
+	sta strPPUAddress
+	lda #$8c
+	sta strPPUAddress + 1
+	
+	lda #LOW(text_Icle)
+    sta stringPtr
+    lda #HIGH(text_Icle)
+    sta stringPtr+1
+	
+	;                ; this code adds a farm tile directly to the gfx buffer (DOESNT EDIT THE MAP)
+	; lda #$03
+	; sta tileBuffer
+	; lda #$01
+	; sta tileBufferLength
+	; lda cursorX
+	; sta tileBuffer + 1
+	; lda cursorY
+	; clc
+	; adc #$03
+	; sta tileBuffer + 2
 	
 InputADone:
 InputRight:
@@ -377,8 +376,6 @@ StringTest:
     lda #HIGH(text_EngineTitle)
     sta stringPtr+1
 	
-	jsr drawString
-	
 EndInit:
 	lda #$90
     sta $2000   ;enable NMIs
@@ -431,305 +428,8 @@ attrLoop:
 	bne attrLoop
 	
 	rts
-
-; tile type in param1, X and Y position of tile in param2 and param3
-; you should only call this during vblank or while bulk drawing with ppu off
-drawTile:
-	tya ; This is Y clobber prevention so that you can keep using Y to do other things if you like.
-	pha
-
-	lda param2
-	asl a ; x multiplied by 0x02
-	sta param2
 	
-	lda #$00
-	sta strPPUAddress
-	lda param3
-	sta strPPUAddress + 1
-	
-	asl strPPUAddress + 1 ; y multiplied by 0x40 (16 bit left shift six times)
-	rol strPPUAddress
-	asl strPPUAddress + 1
-	rol strPPUAddress 
-	asl strPPUAddress + 1 
-	rol strPPUAddress
-	asl strPPUAddress + 1
-	rol strPPUAddress 
-	asl strPPUAddress + 1
-	rol strPPUAddress 
-	asl strPPUAddress + 1
-	rol strPPUAddress
-	
-	clc ; x and y are added together
-	lda param2
-	adc strPPUAddress + 1
-	sta strPPUAddress + 1
-	bcc addDone
-	inc strPPUAddress
-addDone:
-	
-	clc	; the sum of x and y are added to the value $20c0 which is the top part of the map screen
-	lda strPPUAddress + 1
-	adc #$00
-	sta strPPUAddress + 1	
-	
-	lda strPPUAddress
-	adc #$20			
-	sta strPPUAddress
-	
-drawTileTop:
-	lda $2002
-	lda strPPUAddress
-	sta $2006
-	lda strPPUAddress + 1
-	sta $2006	
-	
-	lda param1
-	asl a
-	asl a
-	tay
-	
-	lda MetaTiles, y
-	sta $2007
-	iny
-	lda MetaTiles, y
-	sta $2007
-	iny
-	
-	clc ; go down a row
-	lda strPPUAddress + 1
-	adc #$20
-	sta strPPUAddress + 1
-	
-	bcc drawTileBottom
-	inc strPPUAddress
-	
-drawTileBottom:
-	lda $2002
-	lda strPPUAddress
-	sta $2006
-	lda strPPUAddress + 1
-	sta $2006	
-
-	lda MetaTiles, y
-	sta $2007
-	iny
-	lda MetaTiles, y
-	sta $2007
-	iny
-	
-drawTileDone:
-	pla ; This is the second and concluding portion of the Y clobber prevention.
-	tay
-
-	rts
-	
-; no arguments, draws the entire map (bulk drawing only! this is far too much to fit in vblank!)
-drawMap:
-
-	ldx #$00
-mapByteLoop:
-	
-	lda MapData, x
-	sta currentMapByte
-	sta param1
-	
-	txa ; x coordinate (modulo 16)
-	and #%00001111
-	sta param2
-	
-	txa ; y coordinate (divided by 16 and floored)
-	lsr a
-	lsr a
-	lsr a
-	lsr a
-	clc
-	adc #MAP_DRAW_Y ; 3 metatiles added on to the position of the tile because hotbar
-	sta param3
-	
-	jsr drawTile
-	
-	inx
-	cpx #$c0
-	bne mapByteLoop
-	
-drawUnits:
-	
-	ldx #$00
-unitDrawLoop:
-	
-	
-	rts
-	
-; this is like a bulk drawing version of something which will be done with a buffer soon
-; param4/5: x and y position
-; param6/7: width and height
-
-; param2 temporarily used as the sum of the x+plus width
-; param3 temporarily used as the sum of the y+plus height
-drawTextBox:
-
-	ldy param5
-drawTextBoxYLoop:
-
-	ldx param4
-drawTextBoxXLoop:
-
-	jsr loadTextboxTileToA
-	sta param1 ; param1 holds the tiletype for now, which was previously loaded into A
-	stx param2 ; param2 holds the x position for a little while, since X is occupied
-	
-	;sta param1 ; these lines uncommented would produce a bulk drawing result.
-	;stx param2 ; maybe in the future there can be an additional parameter to switch between
-	;sty param3 ; buffered textbox drawing and bulk textbox drawing. that would be pretty cool.
-	;jsr drawTile
-	
-	txa ; x is temporarily used for indexing the tile buffer
-	pha
-	
-	lda tileBufferLength ; bufferlength * 4 is the start position of the new item in the buffer to place
-	asl a
-	asl a
-	tax 
-	lda param1
-	sta tileBuffer, x ; tiletype stored in param1 for now
-	inx
-	lda param2
-	sta tileBuffer, x ; x value stored in param2 for now 
-	inx
-	tya
-	sta tileBuffer, x ; y value directly stored in Y
-	
-	inc tileBufferLength
-	
-	pla ; the old x returns
-	tax
-	
-	lda param4 ; param2 = (x + width)
-	clc
-	adc param6
-	sta param2
-	
-	inx
-	cpx param2
-	bne drawTextBoxXLoop
-
-	lda param5 ; param3 = (y + height)
-	clc
-	adc param7
-	sta param3
-
-	iny
-	cpy param3
-	bne drawTextBoxYLoop
-	
-	rts
-	
-loadTextboxTileToA:
-	lda param4 ; param2 = (x + width)
-	clc
-	adc param6
-	sta param2
-	lda param5 ; param3 = (y + height)
-	clc
-	adc param7
-	sta param3
-
-checkX:
-	cpx param4
-	bne checkXSummed
-	
-	lda #$08
-	cpy param5
-	beq textBoxTileLoaded
-	
-	lda #$0e
-	dec param3
-	cpy param3
-	beq textBoxTileLoaded
-	
-	lda #$0b
-	jmp textBoxTileLoaded
-	
-checkXSummed:
-	dec param2 ; its evaluating (width+x)-1
-	lda param2
-	sta teste
-	cpx param2
-	bne checkXOther
-	
-	lda #$0a
-	cpy param5
-	beq textBoxTileLoaded
-	
-	lda #$10
-	dec param3
-	cpy param3
-	beq textBoxTileLoaded
-	
-	lda #$0d
-	jmp textBoxTileLoaded
-	
-checkXOther:
-	lda #$09
-	cpy param5
-	beq textBoxTileLoaded
-	
-	lda #$0f
-	dec param3
-	cpy param3
-	beq textBoxTileLoaded
-	
-	lda #$0c
-	
-textBoxTileLoaded:	
-	rts
-	
-; drawString works like this: you set stringPtr and strPPUAddress
-; before you call this subroutine. As long as you do that, you're good to go!
-; Oh, and make sure all your strings end in $ff, or else you get corrupto!!
-; Also, newline character is $fe.
-
-drawString:
-	ldy #$00
-	
-setStringAddr:
-	ldx strPPUAddress
-	stx $2006
-	ldx strPPUAddress + 1
-	stx $2006
-
-drawStringLoop:
-	lda [stringPtr], y
-	cmp #$ff
-	beq drawStringDone
-	
-	cmp #$fe
-	beq newLine
-	
-writeChar: 
-	sta $2007
-	iny
-
-	jmp drawStringLoop
-
-; newLine adds 40 to the initial nametable address where text starts rendering,
-; moving it down 2 tiles = 16 pixels
-newLine:	
-	clc
-	lda strPPUAddress + 1
-	adc #$40
-	sta strPPUAddress + 1
-	
-	bcc newLineDone
-	inc strPPUAddress
-	
-newLineDone:
-	iny
-	jmp setStringAddr
-	
-drawStringDone:
-	rts
+	.include "draw.asm"
 	
 ;----- second 8k bank of PRG-ROM    
     .bank 1
@@ -760,6 +460,9 @@ TextBoxMetaTiles:
 	.db $24, $24, $2a, $2a ; bottom side
 	.db $24, $39, $2a, $3b ; bottom right corner
 	
+MetaTileAttributes:
+	.db $00, $01, $00, $00
+	
 testMap:
 	;.db %01100110, %00100110, %01100110, %00100110
 	.db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
@@ -789,7 +492,10 @@ text_TheLicc:
 	.db $1d, $31, $2e, $24, $15, $32, $2c, $2c, $ff ; "THE LICC"
 	
 text_EngineTitle:	
-	.db $0f, $0a, $1b, $16, $24, $08, $27, $08, $27, $02, $00, $02, $00, $ff ; farm 8/6/2020
+	.db $0f, $0a, $1b, $16, $24, $08, $27, $09, $27, $02, $00, $02, $00, $ff ; farm 8/9/2020
+	
+text_Icle:
+	.db $12, $0c, $15, $0e, $ff ; icle
 
 Song:
 	.db $7f, $20, $02, $25, $0c ; fantasia in funk
@@ -802,6 +508,9 @@ SongNoise:
 TheLicc:
 	.db $02, $04, $05, $07 ; the licc (needs to be fixed, tempo values have yet changed)
 	.db $24, $00, $02, $5f
+	
+	.include "song.asm"
+	.include "famitone4.asm" ; Sound engine
 	
 ;---- vectors
     .org $FFFA     ;first of the three vectors starts here
