@@ -1,8 +1,12 @@
 ; tile type in param1, X and Y position of tile in param2 and param3
+; attr in param8? maybe it should be optional? (it was added on later don't judge xD)
+
 ; you should only call this during vblank or while bulk drawing with ppu off
 drawTile:
 	tya ; This is Y clobber prevention so that you can keep using Y to do other things if you like.
 	pha
+	
+	jsr setAttributes
 
 	lda param2
 	asl a ; x multiplied by 0x02
@@ -30,9 +34,9 @@ drawTile:
 	lda param2
 	adc tilePPUAddress + 1
 	sta tilePPUAddress + 1
-	bcc addDone
+	bcc drawTileAddDone
 	inc tilePPUAddress
-addDone:
+drawTileAddDone:
 	
 	clc	; the sum of x and y are added to the value $20c0 which is the top part of the map screen
 	lda tilePPUAddress + 1
@@ -88,6 +92,98 @@ drawTileDone:
 	pla ; This is the second and concluding portion of the Y clobber prevention.
 	tay
 
+	rts
+	
+; param2 and param3 should still hold the X and Y values passed in from DrawTile
+; y would be clobbered but since this is only called inside a function that pushes y to the stack, its safe
+setAttributes:
+
+	lda param2
+	lsr a ; x divided by 0x02
+	sta param8
+	
+	lda #$00
+	sta tilePPUAddress
+	
+	lda param3
+	lsr a ; y divided by 0x02
+	clc
+	asl a ; then multiplied by 0x08
+	asl a
+	asl a
+	sta tilePPUAddress + 1
+	
+	clc ; x and y are added together
+	lda param8
+	adc tilePPUAddress + 1
+	sta tilePPUAddress + 1
+	bcc setAttributeAddDone
+	inc tilePPUAddress
+setAttributeAddDone:
+	
+	clc	; the sum of x and y are added to the value $23c0 which is the start of the attribute table
+	lda tilePPUAddress + 1
+	adc #$c0
+	sta tilePPUAddress + 1	
+	
+	lda tilePPUAddress
+	adc #$23			
+	sta tilePPUAddress
+	
+	lda tilePPUAddress
+	sta teste
+	lda tilePPUAddress + 1
+	sta teste + 1
+	
+	lda $2002
+	lda tilePPUAddress
+	sta $2006
+	lda tilePPUAddress + 1
+	sta $2006
+	
+loadAttributeByte:
+	; param1 still has the tile value which will soon be drawn
+	
+	ldy param1
+	lda MetaTileAttributes, y
+	;asl a
+	;asl a
+	sta param8 ; param8 stores the metatile byte to be shifted with each subsequent write
+	
+	; iny
+	; lda MapData, y
+	; tay 
+	; lda MetaTileAttributes, y
+	; ora param8
+	; asl a
+	; asl a
+	; sta param8
+	
+	; tya
+	; clc
+	; adc #$10
+	; tay
+	
+	; lda MapData, y
+	; tay 
+	; lda MetaTileAttributes, y
+	; ora param8
+	; asl a
+	; asl a
+	; sta param8
+	
+	; iny
+	; lda MapData, y
+	; tay 
+	; lda MetaTileAttributes, y
+	; ora param8
+	; asl a
+	; asl a
+	; sta param8
+	
+	
+	sta $2007
+	
 	rts
 	
 ; no arguments, draws the entire map (bulk drawing only! this is far too much to fit in vblank!)

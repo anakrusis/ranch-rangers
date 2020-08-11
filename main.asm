@@ -11,6 +11,7 @@ param4 .rs 1
 param5 .rs 1
 param6 .rs 1
 param7 .rs 1
+param8 .rs 1
 	
 globalTick .rs 1 ; For everything
 guiMode .rs 1 
@@ -51,11 +52,14 @@ p2PiecesType .rs 8
 p1UnitCount .rs 1
 p2UnitCount .rs 1
 
+	.rsset $0700
+attributesBuffer .rs 64
+
 JOYPAD1 = $4016
 JOYPAD2 = $4017
 MAP_DRAW_Y = $03
 
-MAX_METATILE_CHANGES = $04 ; per frame, 32 tiles per frame
+MAX_METATILE_CHANGES = $03 ; per frame, 32 tiles per frame
 
 ;----- first 8k bank of PRG-ROM    
     .bank 0
@@ -354,11 +358,11 @@ CopyMapLoop:
 	jsr drawMap
 	
 TextBoxTest:
-	lda #$00
+	lda #$01
 	sta param4
 	lda #$01
 	sta param5
-	lda #$10
+	lda #$0e
 	sta param6
 	lda #$02
 	sta param7
@@ -368,7 +372,7 @@ TextBoxTest:
 StringTest:
 	lda #$20
 	sta strPPUAddress
-	lda #$61
+	lda #$63
 	sta strPPUAddress + 1
 	
 	lda #LOW(text_EngineTitle)
@@ -443,7 +447,7 @@ MetaTiles:
 	.db $42, $42, $42, $42 ;farm
 	
 ; the next correspond to unit IDs
-UnitMetaTiles:
+Player1UnitMetaTiles:
 	.db $82, $83, $92, $93 ;farmer
 	.db $80, $81, $90, $91 ;chicken
 	.db $86, $87, $96, $97 ;cow(bull)
@@ -460,20 +464,29 @@ TextBoxMetaTiles:
 	.db $24, $24, $2a, $2a ; bottom side
 	.db $24, $39, $2a, $3b ; bottom right corner
 	
+Player2UnitMetaTiles:
+	.db $82, $83, $92, $93 ;farmer
+	.db $80, $81, $90, $91 ;chicken
+	.db $86, $87, $96, $97 ;cow(bull)
+	.db $00, $00, $00, $00 ;reserved
+	
 MetaTileAttributes:
-	.db $00, $01, $00, $00
+	.db $00, $01, $00, $00 ; map tiles
+	.db $02, $02, $02, $02 ; player 1 tiles
+	.db $00, $00, $00, $00, $00, $00, $00, $00, $00 ; textbox tiles
+	.db $03, $03, $03, $03 ; player 2 tiles
 	
 testMap:
 	;.db %01100110, %00100110, %01100110, %00100110
 	.db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 	.db $00, $00, $00, $02, $02, $00, $00, $00, $02, $00, $00, $00, $00, $00, $00, $00
-	.db $00, $00, $02, $02, $02, $02, $02, $02, $02, $02, $02, $00, $00, $00, $00, $00
-	.db $00, $00, $02, $02, $02, $02, $01, $02, $02, $02, $02, $02, $02, $00, $00, $00
+	.db $00, $00, $04, $02, $02, $02, $02, $02, $02, $02, $02, $00, $00, $00, $00, $00
+	.db $00, $00, $04, $02, $02, $02, $01, $02, $02, $02, $02, $02, $02, $00, $00, $00
 	.db $00, $02, $02, $02, $02, $02, $02, $01, $02, $02, $02, $02, $02, $02, $00, $00
 	.db $00, $02, $05, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $00
 	.db $00, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $00
-	.db $00, $00, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $00
-	.db $00, $00, $02, $02, $02, $02, $02, $02, $02, $02, $01, $02, $02, $00, $00, $00
+	.db $00, $00, $06, $02, $02, $02, $02, $02, $02, $02, $01, $02, $02, $02, $02, $00
+	.db $00, $00, $02, $02, $02, $02, $02, $02, $02, $02, $01, $01, $02, $00, $00, $00
 	.db $00, $00, $00, $02, $02, $02, $02, $02, $00, $00, $02, $02, $00, $00, $00, $00
 	.db $00, $00, $00, $00, $02, $02, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 	.db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
@@ -485,14 +498,14 @@ CursorSpriteData:
 	.db $08, $80, %11000011, $08 
 	
 BackgroundPalette:
-	.db $2a, $30, $11, $1a, $2a, $06, $0a, $1a, $2a, $15, $27, $30, $2a, $13, $24, $30 ; bg
+	.db $2a, $30, $11, $1a, $2a, $17, $0a, $1a, $2a, $15, $27, $30, $2a, $03, $24, $30 ; bg
 	.db $2a, $15, $27, $30, $2a, $14, $24, $34, $2a, $14, $24, $34, $2a, $14, $24, $34 ; sprites
 	
 text_TheLicc:
 	.db $1d, $31, $2e, $24, $15, $32, $2c, $2c, $ff ; "THE LICC"
 	
 text_EngineTitle:	
-	.db $0f, $0a, $1b, $16, $24, $08, $27, $09, $27, $02, $00, $02, $00, $ff ; farm 8/9/2020
+	.db $0f, $0a, $1b, $16, $ff, $08, $27, $01, $01, $27, $02, $00, $02, $00, $ff ; farm 8/11/2020
 	
 text_Icle:
 	.db $12, $0c, $15, $0e, $ff ; icle
