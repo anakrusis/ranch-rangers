@@ -117,6 +117,9 @@ setAttributes:
 	lda param8
 	adc tilePPUAddress + 1
 	sta tilePPUAddress + 1
+	sta param8                  ; param8 has the low byte of the ppu address index before it gets added to $23c0
+								; so that it can be used to index the attribute buffer in RAM
+	
 	bcc setAttributeAddDone
 	inc tilePPUAddress
 setAttributeAddDone:
@@ -143,46 +146,82 @@ setAttributeAddDone:
 	
 loadAttributeByte:
 	; param1 still has the tile value which will soon be drawn
+	; param2 and param3 still have the x and y values when they were passed in!
+	
+; this code is based on a description given by rainwarrior here on this thread: https://forums.nesdev.com/viewtopic.php?t=13950
+
+; however the janky implementation is entirely my fault ;)
+	
+attributeClearMaskLoad: ;first bitmask for bits that stay the same
+
+	lda param2
+	and #$01
+	cmp #$01
+	beq attrClrXOdd
+	jmp attrClrXEven
+	
+attrClrXOdd:
+	lda param3
+	and #$01
+	cmp #$01
+	beq attrClrXOddYOdd
+attrClrXOddYEven:
+	lda #%00001100
+	sta param9
+	jmp attrClearMaskLoadDone
+	
+attrClrXOddYOdd:
+	lda #%11000000
+	sta param9
+	jmp attrClearMaskLoadDone
+
+attrClrXEven:
+	lda param3
+	and #$01
+	cmp #$01
+	beq attrClrXEvenYOdd
+attrClrXEvenYEven:
+	lda #%00000011
+	sta param9
+	jmp attrClearMaskLoadDone
+
+attrClrXEvenYOdd:
+	lda #%00110000
+	sta param9
+	
+	; param8 has the index to access the target value from attributesBuffer
+	; param9 has the bitmask to be used on the target value
+	
+attrClearMaskLoadDone:
+
+	lda param7 ; param7 temporarily used
+	pha
+	
+	lda param9
+	eor #%11111111 ; oops I have to invert it again, maybe will remove this and fix later
+	sta param9     ; this bitmask is used for the bits that are staying the same
+
+	ldy param8
+	lda attributesBuffer, y ; target value loaded
+	and param9              ; bitmasked target value to be put in param7
+	sta param7   
+	
+	lda param9
+	eor #%11111111 ; inverted bitmask for bits that are changing
+	sta param9
 	
 	ldy param1
-	lda MetaTileAttributes, y
-	;asl a
-	;asl a
-	sta param8 ; param8 stores the metatile byte to be shifted with each subsequent write
+	lda MetaTileAttributes, y ; new value loaded
+	and param9                ; bitmasked target value
 	
-	; iny
-	; lda MapData, y
-	; tay 
-	; lda MetaTileAttributes, y
-	; ora param8
-	; asl a
-	; asl a
-	; sta param8
+	ora param7                ; or together new value and target value
 	
-	; tya
-	; clc
-	; adc #$10
-	; tay
-	
-	; lda MapData, y
-	; tay 
-	; lda MetaTileAttributes, y
-	; ora param8
-	; asl a
-	; asl a
-	; sta param8
-	
-	; iny
-	; lda MapData, y
-	; tay 
-	; lda MetaTileAttributes, y
-	; ora param8
-	; asl a
-	; asl a
-	; sta param8
-	
-	
+	ldy param8
+	sta attributesBuffer, y ; back to its original position in the attributes buffer, and into the ppu
 	sta $2007
+	
+	pla
+	sta param7 ; restore param7
 	
 	rts
 	
