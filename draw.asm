@@ -262,7 +262,7 @@ unitDrawLoop:
 	
 	rts
 	
-; this is like a bulk drawing version of something which will be done with a buffer soon
+; this is simply buffering metatiles and can be called whenever!
 ; param4/5: x and y position
 ; param6/7: width and height
 
@@ -432,7 +432,7 @@ newLineDone:
 drawStringDone:
 	rts
 	
-; drawMapChunk behaves just like drawTextBox!
+; drawMapChunk behaves just like drawTextBox! it can be called whenever, it's buffered!
 ; param4/5: x and y position
 ; param6/7: width and height
 

@@ -15,11 +15,10 @@ param8 .rs 1
 param9 .rs 1
 	
 globalTick .rs 1 ; For everything
+
+; read the docs on this one lol... It Means Many Things
 guiMode .rs 1 
-; guide:
-; 00 = no windows open
-; 01 = farm/unit screen
-; 02 = unit selection screen (cow, chicken)
+menuCursorPos .rs 1
 
 stringPtr  .rs 2 ; Where's the string we're rendering
 strPPUAddress .rs 2 ; What address will the string go to in the ppu
@@ -506,7 +505,7 @@ text_TheLicc:
 	.db $1d, $31, $2e, $24, $15, $32, $2c, $2c, $ff ; "THE LICC"
 	
 text_EngineTitle:	
-	.db $0f, $0a, $1b, $16, $ff, $08, $27, $01, $01, $27, $02, $00, $02, $00, $ff ; farm 8/11/2020
+	.db $0f, $0a, $1b, $16, $24, $08, $27, $01, $03, $27, $02, $00, $02, $00, $ff ; farm 8/13/2020
 	
 text_Icle:
 	.db $12, $0c, $15, $0e, $ff ; icle
