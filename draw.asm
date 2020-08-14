@@ -513,3 +513,79 @@ drawMapChunkXLoop:
 	bne drawMapChunkYLoop
 	
 	rts
+	
+drawCursor:
+	lda guiMode
+	cmp #$01
+	bne hideMapCursor
+
+	lda cursorX ; set cursor x position on screen (will be made better soon (read: without oam hardcoding))
+	asl a       ; multiplied by 16 (coarse)
+	asl a
+	asl a
+	asl a
+	sta $0203
+	sta $020b
+	clc
+	adc #$08
+	sta $0207
+	sta $020f
+	
+	lda cursorY
+	adc #MAP_DRAW_Y ; position is offset by 3 metatiles by default
+	asl a           ; multiplied by 16 (coarse)
+	asl a
+	asl a
+	asl a
+	sta $0200
+	sta $0204
+	clc
+	adc #$08
+	sta $0208
+	sta $020c
+	
+	lda #$80 ; the rectangly icon
+	sta $0201
+	
+	; lda #%00000011 ; all that flippy stuff lol
+	; sta $0202
+	; lda #%01000011
+	; sta $0206
+	; lda #%10000011
+	; sta $020a
+	; lda #%11000011
+	; sta $020e
+	
+	jmp drawCursorDone
+	
+hideMapCursor:
+	lda #$fe
+	sta $0200
+	sta $0204
+	sta $0208
+	sta $020c
+	
+	lda guiMode
+	cmp #$00
+	bne drawMenuCursor
+	jmp drawCursorDone
+
+drawMenuCursor:
+	lda activeGuiX
+	asl a
+	asl a
+	asl a
+	asl a
+	sta $0203
+	lda activeGuiY
+	asl a
+	asl a
+	asl a
+	asl a
+	sta $0200
+	
+	lda #$81 ; cursor icon
+	sta $0201
+	
+drawCursorDone:
+	rts

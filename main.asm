@@ -19,6 +19,11 @@ globalTick .rs 1 ; For everything
 ; read the docs on this one lol... It Means Many Things
 guiMode .rs 1 
 menuCursorPos .rs 1
+menuSize .rs 1 ; number of items in the menu to select from
+activeGuiX .rs 1 ; these are used to handle the GUI stuff now
+activeGuiY .rs 1
+activeGuiWidth .rs 1
+activeGuiHeight .rs 1
 
 stringPtr  .rs 2 ; Where's the string we're rendering
 strPPUAddress .rs 2 ; What address will the string go to in the ppu
@@ -51,6 +56,8 @@ p2PiecesType .rs 8
 	.rsset $0500
 p1UnitCount .rs 1
 p2UnitCount .rs 1
+p1Gold .rs 1
+p2Gold .rs 1
 
 	.rsset $0700
 attributesBuffer .rs 64
@@ -122,32 +129,8 @@ TileBufferResetPointer:
 	sta tileBufferIndex
 	
 TileBufferHandlerDone:
-
-DrawCursor:
-	lda cursorX ; set cursor x position on screen (will be made better soon (read: without oam hardcoding))
-	asl a       ; multiplied by 16 (coarse)
-	asl a
-	asl a
-	asl a
-	sta $0203
-	sta $020b
-	clc
-	adc #$08
-	sta $0207
-	sta $020f
 	
-	lda cursorY
-	adc #MAP_DRAW_Y ; position is offset by 3 metatiles by default
-	asl a           ; multiplied by 16 (coarse)
-	asl a
-	asl a
-	asl a
-	sta $0200
-	sta $0204
-	clc
-	adc #$08
-	sta $0208
-	sta $020c
+	jsr drawCursor
 
 DrawDone:
 	lda #%10010000   ; enable NMI, sprites from Pattern Table 0, background from Pattern Table 1
@@ -198,12 +181,9 @@ InputB:
 	cmp #$00
 	bne InputBDone
 	
-	lda #$05
-	sta param4
-	sta param5
-	sta param6
-	sta param7
-	jsr drawMapChunk
+	lda #$01
+	sta guiMode
+	jsr closeCurrentTextBox
 
 InputBDone:
 InputA:
@@ -216,22 +196,26 @@ InputA:
 	cmp #$00
 	bne InputADone
 	
-	lda #$05
-	sta param4
-	sta param5
-	sta param6
-	sta param7
-	jsr drawTextBox
+	lda guiMode
+	cmp #$00
+	beq InputAPauseScreen
+	cmp #$01
+	beq InputAMainScreen
+	cmp #$02
+	beq InputABuildScreen
+	jmp InputADone
 	
-	lda #$21
-	sta strPPUAddress
-	lda #$8c
-	sta strPPUAddress + 1
+InputAMainScreen:
+	lda #$02
+	sta guiMode
+	jsr textboxBuildOpen
+	jmp InputADone
 	
-	lda #LOW(text_Icle)
-    sta stringPtr
-    lda #HIGH(text_Icle)
-    sta stringPtr+1
+InputAPauseScreen:
+	jmp InputADone
+	
+InputABuildScreen:
+	jmp InputADone
 	
 	;                ; this code adds a farm tile directly to the gfx buffer (DOESNT EDIT THE MAP)
 	; lda #$03
@@ -355,8 +339,6 @@ CopyMapLoop:
 	dex
 	bne CopyMapLoop
 	
-	jsr drawMap
-	
 TextBoxTest:
 	lda #$01
 	sta param4
@@ -381,6 +363,9 @@ StringTest:
     sta stringPtr+1
 	
 EndInit:
+	jsr initGameState
+	jsr drawMap
+
 	lda #$90
     sta $2000   ;enable NMIs
 	
@@ -398,7 +383,7 @@ EndInit:
 forever:
     jmp forever
 
-; no arguments, fills the first nametable with 24 (blank blue character)	
+; no arguments, fills both nametables with 24 (blank blue character). bulk drawing only! wayyy too much for vblank!	
 clearScreen:
 	lda $2002
 	lda #$20
@@ -414,7 +399,7 @@ BGLoop:
 	sta $2007
 	sta $2007
 	inx
-	cpx #$ff
+	cpx #$f0
 	bne BGLoop 
 	
 loadAttr:
@@ -428,9 +413,127 @@ attrLoop:
 	lda #$00 ; all the first palette
 	sta $2007 
 	inx
-	cpx #$80
+	cpx #$40
 	bne attrLoop
 	
+	lda $2002
+	lda #$24
+	sta $2006
+	lda #$00
+	sta $2006
+	
+	ldx #$00
+SecondBGLoop:
+	lda #$24 ; blank blue tile
+	sta $2007
+	sta $2007
+	sta $2007
+	sta $2007
+	inx
+	cpx #$f0
+	bne SecondBGLoop 
+	
+loadSecondAttr:
+	lda $2002   
+	lda #$27
+	sta $2006   
+	lda #$C0
+	sta $2006   
+	ldx #$00
+secondAttrLoop:
+	lda #$00 ; all the first palette
+	sta $2007 
+	inx
+	cpx #$40
+	bne secondAttrLoop
+	
+	rts
+	
+initGameState:
+	lda #$01
+	sta guiMode
+	
+	; these have to be set or else the GUI glitches when trying to close a nonexistent gui lol
+	sta activeGuiWidth
+	sta activeGuiHeight
+	lda #$05
+	sta activeGuiX
+	sta activeGuiY
+	rts
+	
+textboxBuildOpen:
+	lda #$05
+	sta param4
+	sta param5
+	sta param6
+	lda #$03
+	sta param7
+	jsr drawTextBox
+	
+	lda #LOW(text_BuildMenu)
+    sta stringPtr
+    lda #HIGH(text_BuildMenu)
+    sta stringPtr+1
+	
+	jsr initNewTextBox
+	
+	rts
+	
+initNewTextBox:
+	lda param4
+	sta activeGuiX
+	lda param5
+	sta activeGuiY
+	lda param6
+	sta activeGuiWidth
+	lda param7
+	sta activeGuiHeight
+	
+	lda #$00
+	sta menuCursorPos
+	
+	lda #%00100000      ; high byte of ppu address
+	sta strPPUAddress
+	lda param5          ; high 2 bits of Y
+	asl a               ; (times 2, because Y is in metatiles)
+	lsr a
+	lsr a
+	lsr a
+	ora strPPUAddress
+	sta strPPUAddress
+	
+	lda #$00
+	sta strPPUAddress+1
+	lda param5         ; low 3 bits of Y
+	asl a              ; (also times 2)
+	asl a
+	asl a
+	asl a
+	asl a
+	asl a
+	ora strPPUAddress+1
+	sta strPPUAddress+1
+	
+	lda param4 ; all of X (times 2)
+	asl a
+	ora strPPUAddress+1
+	clc
+	adc #$02   ; just convention, but text on textboxes always starts two tiles to the right (gives room for a cursor)
+	sta strPPUAddress+1
+	
+	rts
+	
+closeCurrentTextBox:
+	lda activeGuiX
+	sta param4
+	lda activeGuiY
+	sta param5
+	lda activeGuiWidth
+	sta param6
+	lda activeGuiHeight
+	sta param7
+	
+	jsr drawMapChunk
 	rts
 	
 	.include "draw.asm"
@@ -480,12 +583,12 @@ testMap:
 	;.db %01100110, %00100110, %01100110, %00100110
 	.db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 	.db $00, $00, $00, $02, $02, $00, $00, $00, $02, $00, $00, $00, $00, $00, $00, $00
-	.db $00, $00, $02, $04, $02, $02, $02, $02, $02, $02, $02, $00, $00, $00, $00, $00
-	.db $00, $00, $04, $02, $02, $02, $01, $02, $02, $02, $02, $02, $02, $00, $00, $00
-	.db $00, $02, $02, $02, $02, $02, $02, $01, $02, $02, $02, $02, $11, $02, $00, $00
-	.db $00, $02, $05, $02, $02, $02, $02, $02, $02, $02, $02, $02, $12, $02, $02, $00
-	.db $00, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $13, $02, $02, $02, $00
-	.db $00, $00, $06, $02, $02, $02, $02, $02, $02, $02, $01, $02, $02, $02, $02, $00
+	.db $00, $00, $02, $02, $02, $02, $02, $02, $02, $02, $02, $00, $00, $00, $00, $00
+	.db $00, $00, $02, $02, $02, $02, $01, $02, $02, $02, $02, $02, $02, $00, $00, $00
+	.db $00, $02, $02, $02, $02, $02, $02, $01, $02, $02, $02, $02, $02, $02, $00, $00
+	.db $00, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $00
+	.db $00, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $00
+	.db $00, $00, $02, $02, $02, $02, $02, $02, $02, $02, $01, $02, $02, $02, $02, $00
 	.db $00, $00, $02, $02, $02, $02, $02, $02, $02, $02, $01, $01, $02, $00, $00, $00
 	.db $00, $00, $00, $02, $02, $02, $02, $02, $00, $00, $02, $02, $00, $00, $00, $00
 	.db $00, $00, $00, $00, $02, $02, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
@@ -498,7 +601,7 @@ CursorSpriteData:
 	.db $08, $80, %11000011, $08 
 	
 BackgroundPalette:
-	.db $2a, $30, $11, $38, $2a, $17, $0a, $1a, $2a, $15, $27, $30, $2a, $03, $24, $30 ; bg
+	.db $2a, $30, $11, $38, $2a, $17, $0a, $1a, $2a, $05, $27, $30, $2a, $03, $24, $30 ; bg
 	.db $2a, $15, $27, $30, $2a, $14, $24, $34, $2a, $14, $24, $34, $2a, $14, $24, $34 ; sprites
 	
 text_TheLicc:
@@ -509,6 +612,9 @@ text_EngineTitle:
 	
 text_Icle:
 	.db $12, $0c, $15, $0e, $ff ; icle
+	
+text_BuildMenu:
+	.db $0b, $1e, $12, $15, $0d, $fe, $1e, $17, $12, $1d, $fe, $0f, $0a, $1b, $16, $ff
 
 Song:
 	.db $7f, $20, $02, $25, $0c ; fantasia in funk
