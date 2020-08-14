@@ -576,12 +576,26 @@ drawMenuCursor:
 	asl a
 	asl a
 	asl a
+	clc
+	adc #$08 ; plus 8 pixels
 	sta $0203
 	lda activeGuiY
 	asl a
 	asl a
 	asl a
 	asl a
+	clc
+	adc #$10   ; plus 16 pixels
+	sta param1 ; temporarily store the top position
+	
+	lda menuCursorPos ; (cursorpos * 16) + top position
+	asl a
+	asl a
+	asl a
+	asl a
+	clc
+	adc param1
+	
 	sta $0200
 	
 	lda #$81 ; cursor icon

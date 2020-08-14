@@ -164,119 +164,8 @@ ReadControllerLoop:
     rol buttons2    ; Carry -> bit 0; bit 7 -> Carry
     bcc ReadControllerLoop
 	
-InputHandler:
-	lda globalTick
-	and #$03
-	cmp #$00
-	beq InputB
-	jmp InputHandlerDone
+	jsr InputHandler
 	
-InputB:
-	lda buttons1
-	and #$40
-	cmp #$40
-	bne InputBDone
-	
-	lda tileBufferLength
-	cmp #$00
-	bne InputBDone
-	
-	lda #$01
-	sta guiMode
-	jsr closeCurrentTextBox
-
-InputBDone:
-InputA:
-	lda buttons1
-	and #$80
-	cmp #$80
-	bne InputADone
-	
-	lda tileBufferLength
-	cmp #$00
-	bne InputADone
-	
-	lda guiMode
-	cmp #$00
-	beq InputAPauseScreen
-	cmp #$01
-	beq InputAMainScreen
-	cmp #$02
-	beq InputABuildScreen
-	jmp InputADone
-	
-InputAMainScreen:
-	lda #$02
-	sta guiMode
-	jsr textboxBuildOpen
-	jmp InputADone
-	
-InputAPauseScreen:
-	jmp InputADone
-	
-InputABuildScreen:
-	jmp InputADone
-	
-	;                ; this code adds a farm tile directly to the gfx buffer (DOESNT EDIT THE MAP)
-	; lda #$03
-	; sta tileBuffer
-	; lda #$01
-	; sta tileBufferLength
-	; lda cursorX
-	; sta tileBuffer + 1
-	; lda cursorY
-	; clc
-	; adc #$03
-	; sta tileBuffer + 2
-	
-InputADone:
-InputRight:
-	lda buttons1
-	and #$01
-	cmp #$01
-	bne InputRightDone
-	inc cursorX
-	lda cursorX
-	and #$0f
-	sta cursorX
-InputRightDone:
-InputLeft:
-	lda buttons1
-	and #$02
-	cmp #$02
-	bne InputLeftDone
-	dec cursorX
-	lda cursorX
-	and #$0f
-	sta cursorX
-InputLeftDone:
-InputUp:
-	lda buttons1
-	and #$08
-	cmp #$08
-	bne InputUpDone
-	dec cursorY
-	lda cursorY
-	cmp #$0c
-	bcc InputUpDone
-	lda #$0b
-	sta cursorY
-InputUpDone:
-InputDown:
-	lda buttons1
-	and #$04
-	cmp #$04
-	bne InputDownDone
-	inc cursorY
-	lda cursorY
-	cmp #$0c
-	bcc InputDownDone
-	lda #$00
-	sta cursorY
-InputDownDone:
-
-InputHandlerDone:
-
 	jsr FamiToneUpdate
 	inc globalTick
 	
@@ -475,6 +364,9 @@ textboxBuildOpen:
     lda #HIGH(text_BuildMenu)
     sta stringPtr+1
 	
+	lda #$02
+	sta menuSize
+	
 	jsr initNewTextBox
 	
 	rts
@@ -537,6 +429,7 @@ closeCurrentTextBox:
 	rts
 	
 	.include "draw.asm"
+	.include "input.asm"
 	
 ;----- second 8k bank of PRG-ROM    
     .bank 1
