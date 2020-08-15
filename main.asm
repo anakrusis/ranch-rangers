@@ -37,6 +37,8 @@ cursorY .rs 1
 
 buttons1 .rs 1
 buttons2 .rs 1
+prevButtons1 .rs 1
+prevButtons2 .rs 1
 
 	.rsset $0100
 tileBufferLength .rs 1
@@ -145,6 +147,12 @@ DrawDone:
 	sta $2003  
 	lda #$02
 	sta $4014 ; oam dma
+	
+	; buttons from the previous frame to be compared for new presses!
+	lda buttons1
+	sta prevButtons1
+	lda buttons2
+	sta prevButtons2
 
 ; This is from the nesdev wiki: http://wiki.nesdev.com/w/index.php/Controller_reading_code
 ReadControllers:
@@ -371,6 +379,28 @@ textboxBuildOpen:
 	
 	rts
 	
+textboxUnitOpen:
+	lda #$0a
+	sta param4
+	lda #$05
+	sta param5
+	sta param6
+	lda #$05
+	sta param7
+	jsr drawTextBox
+	
+	lda #LOW(text_UnitMenu)
+    sta stringPtr
+    lda #HIGH(text_UnitMenu)
+    sta stringPtr+1
+	
+	lda #$03
+	sta menuSize
+	
+	jsr initNewTextBox
+	
+	rts
+	
 initNewTextBox:
 	lda param4
 	sta activeGuiX
@@ -501,13 +531,16 @@ text_TheLicc:
 	.db $1d, $31, $2e, $24, $15, $32, $2c, $2c, $ff ; "THE LICC"
 	
 text_EngineTitle:	
-	.db $0f, $0a, $1b, $16, $24, $08, $27, $01, $03, $27, $02, $00, $02, $00, $ff ; farm 8/13/2020
+	.db $0f, $0a, $1b, $16, $24, $08, $27, $01, $05, $27, $02, $00, $02, $00, $ff ; farm 8/15/2020
 	
 text_Icle:
 	.db $12, $0c, $15, $0e, $ff ; icle
 	
 text_BuildMenu:
 	.db $0b, $1e, $12, $15, $0d, $fe, $1e, $17, $12, $1d, $fe, $0f, $0a, $1b, $16, $ff
+	
+text_UnitMenu:
+	.db $1e, $17, $12, $1d, $ff
 
 Song:
 	.db $7f, $20, $02, $25, $0c ; fantasia in funk
