@@ -532,11 +532,14 @@ drawCursor:
 	sta $020f
 	
 	lda cursorY
+	clc
 	adc #MAP_DRAW_Y ; position is offset by 3 metatiles by default
 	asl a           ; multiplied by 16 (coarse)
 	asl a
 	asl a
 	asl a
+	sec
+	sbc #$01        ; seems to render 1 pixel too low lol so subtract 1
 	sta $0200
 	sta $0204
 	clc
@@ -544,7 +547,7 @@ drawCursor:
 	sta $0208
 	sta $020c
 	
-	lda #$80 ; the rectangly icon
+	lda #$80 ; the rectangly icon tile
 	sta $0201
 	
 	; lda #%00000011 ; all that flippy stuff lol

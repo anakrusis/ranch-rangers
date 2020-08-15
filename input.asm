@@ -62,9 +62,7 @@ InputA:
 	jmp InputADone
 	
 InputAMainScreen:
-	lda #$02
-	sta guiMode
-	jsr textboxBuildOpen
+	jsr AButtonMainScreenHandler
 	jmp InputADone
 	
 InputAPauseScreen:
@@ -229,4 +227,27 @@ InputDownMainScreen:
 InputDownDone:
 
 InputHandlerDone:
+	rts
+	
+AButtonMainScreenHandler:
+
+	;todo handle differently when a unit occupies the space
+
+	lda cursorY ; ensures the build menu only opens on grass tiles
+	asl a
+	asl a
+	asl a
+	asl a
+	clc
+	adc cursorX
+	tax
+	lda MapData, x
+	cmp #$02
+	bne AButtonMainScreenDone
+
+	lda #$02
+	sta guiMode
+	jsr textboxBuildOpen
+	
+AButtonMainScreenDone:
 	rts
