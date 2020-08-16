@@ -260,8 +260,8 @@ StringTest:
     sta stringPtr+1
 	
 EndInit:
-	jsr initGameState
 	jsr drawMap
+	jsr initGameState
 
 	lda #$90
     sta $2000   ;enable NMIs
@@ -348,7 +348,25 @@ secondAttrLoop:
 	
 initGameState:
 	lda #$01
-	sta guiMode
+	sta guiMode ; main guimode
+	
+	lda #$04     ; player 1 farmer spawned
+	sta param4
+	sta param5
+	lda #$00
+	sta param6
+	sta param7
+	jsr placeUnit
+	
+	lda #$0d    ; player 2 farmer spawned
+	sta param4
+	lda #$06
+	sta param5
+	lda #$00
+	sta param6
+	lda #$01
+	sta param7
+	jsr placeUnit
 	
 	; these have to be set or else the GUI glitches when trying to close a nonexistent gui lol
 	sta activeGuiWidth
@@ -458,6 +476,68 @@ closeCurrentTextBox:
 	jsr drawMapChunk
 	rts
 	
+; X and Y pos: param4 and param5
+; unit type: param6
+; allegiance: param7 $00 = player 1, $01 = player 2
+placeUnit:
+
+	lda param7
+	cmp #$00
+	beq p1UnitLoad
+	jmp p2UnitLoad
+
+p1UnitLoad:
+
+	ldx p1UnitCount
+	
+	lda param4
+	sta p1PiecesX, x
+	
+	lda param5
+	sta p1PiecesY, x
+	
+	lda param6
+	sta p1PiecesType, x
+	
+	inc p1UnitCount
+
+	lda param6
+	clc
+	adc #$04
+	jmp UnitLoaded
+p2UnitLoad:
+
+	ldx p2UnitCount
+	
+	lda param4
+	sta p2PiecesX, x
+	
+	lda param5
+	sta p2PiecesY, x
+	
+	lda param6
+	sta p2PiecesType, x
+	
+	inc p2UnitCount
+
+	lda param6
+	clc 
+	adc #$11
+	
+UnitLoaded:
+	sta param1
+	
+	lda param4 ; transfer x and y coordinates
+	sta param2
+	lda param5
+	clc
+	adc #MAP_DRAW_Y
+	sta param3
+	
+	jsr placeTileInBuffer
+
+	rts
+	
 	.include "draw.asm"
 	.include "input.asm"
 	
@@ -508,8 +588,8 @@ testMap:
 	.db $00, $00, $00, $02, $02, $00, $00, $00, $02, $00, $00, $00, $00, $00, $00, $00
 	.db $00, $00, $02, $02, $02, $02, $02, $02, $02, $02, $02, $00, $00, $00, $00, $00
 	.db $00, $00, $02, $02, $02, $02, $01, $02, $02, $02, $02, $02, $02, $00, $00, $00
-	.db $00, $02, $04, $02, $02, $02, $02, $01, $02, $02, $02, $02, $02, $02, $00, $00
-	.db $00, $02, $05, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $00
+	.db $00, $02, $02, $02, $02, $02, $02, $01, $02, $02, $02, $02, $02, $02, $00, $00
+	.db $00, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $00
 	.db $00, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $00
 	.db $00, $00, $02, $02, $02, $02, $02, $02, $02, $02, $01, $02, $02, $02, $02, $00
 	.db $00, $00, $02, $02, $02, $02, $02, $02, $02, $02, $01, $01, $02, $00, $00, $00
@@ -531,7 +611,7 @@ text_TheLicc:
 	.db $1d, $31, $2e, $24, $15, $32, $2c, $2c, $ff ; "THE LICC"
 	
 text_EngineTitle:	
-	.db $0f, $0a, $1b, $16, $24, $08, $27, $01, $05, $27, $02, $00, $02, $00, $ff ; farm 8/15/2020
+	.db $0f, $0a, $1b, $16, $24, $08, $27, $01, $06, $27, $02, $00, $02, $00, $ff ; farm 8/16/2020
 	
 text_Icle:
 	.db $12, $0c, $15, $0e, $ff ; icle
@@ -540,7 +620,7 @@ text_BuildMenu:
 	.db $0b, $1e, $12, $15, $0d, $fe, $1e, $17, $12, $1d, $fe, $0f, $0a, $1b, $16, $ff
 	
 text_UnitMenu:
-	.db $1e, $17, $12, $1d, $ff
+	.db $1e, $17, $12, $1d, $fe, $0c, $11, $12, $0c, $14, $0e, $17, $ff
 
 Song:
 	.db $7f, $20, $02, $25, $0c ; fantasia in funk

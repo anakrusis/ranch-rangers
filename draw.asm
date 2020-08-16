@@ -254,11 +254,7 @@ mapByteLoop:
 	cpx #$c0
 	bne mapByteLoop
 	
-drawUnits:
-	
-	ldx #$00
-unitDrawLoop:
-	
+drawMapDone:
 	
 	rts
 	
@@ -279,6 +275,7 @@ drawTextBoxXLoop:
 	jsr loadTextboxTileToA
 	sta param1 ; param1 holds the tiletype for now, which was previously loaded into A
 	stx param2 ; param2 holds the x position for a little while, since X is occupied
+	sty param3
 	
 	;sta param1 ; these lines uncommented would produce a bulk drawing result.
 	;stx param2 ; maybe in the future there can be an additional parameter to switch between
@@ -288,20 +285,7 @@ drawTextBoxXLoop:
 	txa ; x is temporarily used for indexing the tile buffer
 	pha
 	
-	lda tileBufferLength ; bufferlength * 4 is the start position of the new item in the buffer to place
-	asl a
-	asl a
-	tax 
-	lda param1
-	sta tileBuffer, x ; tiletype stored in param1 for now
-	inx
-	lda param2
-	sta tileBuffer, x ; x value stored in param2 for now 
-	inx
-	tya
-	sta tileBuffer, x ; y value directly stored in Y
-	
-	inc tileBufferLength
+	jsr placeTileInBuffer
 	
 	pla ; the old x returns
 	tax
@@ -391,7 +375,14 @@ textBoxTileLoaded:
 ; Oh, and make sure all your strings end in $ff, or else you get corrupto!!
 ; Also, newline character is $fe.
 
+; todo make it buffered also lol it used to clobber everything, I didn't know how to use ram hardly when I wrote this
+
 drawString:
+	txa
+	pha
+	tya
+	pha
+
 	ldy #$00
 	
 setStringAddr:
@@ -430,6 +421,11 @@ newLineDone:
 	jmp setStringAddr
 	
 drawStringDone:
+	pla 
+	tay
+	pla
+	tax
+
 	rts
 	
 ; drawMapChunk behaves just like drawTextBox! it can be called whenever, it's buffered!
@@ -445,6 +441,51 @@ drawMapChunkYLoop:
 
 	ldx param4
 drawMapChunkXLoop:
+
+	stx param2 ; param2 and param3 temporarily hold the x and y values for now
+	sty param3 
+	
+	txa
+	pha
+	
+	; Hey, this first portion of the map chunk rendering attempts to bypass the typical tile drawing by
+	; iterating through each players units and seeing if their coordinates match up with the X/Y iterators.
+	; If so, it loads those metatiles to the buffer and skips the tile rendering.
+	
+	; todo player 1's pieces also
+	
+	ldx #$00    ; here the x register is used to iterate through all of player 2's units
+scanP2PiecesLoop:
+	lda p2PiecesX, x
+	cmp param2
+	bne scanP2PiecesLoopTail
+	
+	lda p2PiecesY, x
+	clc
+	adc #MAP_DRAW_Y
+	cmp param3
+	bne scanP2PiecesLoopTail
+	
+	lda p2PiecesType, x           ; if both the X and Y coordinates match, then add the unit to the buffer
+	clc 
+	adc #$11
+	sta param1
+	; param2 and param3 are already set up and good to go
+	
+	jsr placeTileInBuffer
+	
+	pla ; before leaving the player unit iteration loop, we have to restore the original x and y registers!
+	tax
+	
+	jmp drawMapChunkXLoopTail
+	
+scanP2PiecesLoopTail:
+	inx
+	cpx p2UnitCount
+	bne scanP2PiecesLoop
+	
+	pla
+	tax
 
 	; map tile has to get to A so here goes...
 	tya
@@ -470,29 +511,19 @@ drawMapChunkXLoop:
 	pla ; x is back in business
 	tax
 
-	;jsr loadTextboxTileToA
-	stx param2 ; param2 holds the x position for a little while, since X is occupied
+	stx param2 ; param2 holds the x position and param3 holds the y position
+	sty param3
 	
-	txa ; x is temporarily used for indexing the tile buffer
+	txa ; (x is clobbered by the following subroutine)
 	pha
 	
-	lda tileBufferLength ; bufferlength * 4 is the start position of the new item in the buffer to place
-	asl a
-	asl a
-	tax 
-	lda param1
-	sta tileBuffer, x ; tiletype stored in param1 for now
-	inx
-	lda param2
-	sta tileBuffer, x ; x value stored in param2 for now 
-	inx
-	tya
-	sta tileBuffer, x ; y value directly stored in Y
-	
-	inc tileBufferLength
+	; param1 2 and 3 get passed into here
+	jsr placeTileInBuffer
 	
 	pla ; the old x returns
 	tax
+	
+drawMapChunkXLoopTail: ; here the temp variables in param2&3 are generated to determine whether the rectangle has been fully achieved.
 	
 	lda param4 ; param2 = (x + width)
 	clc
@@ -510,8 +541,10 @@ drawMapChunkXLoop:
 
 	iny
 	cpy param3
-	bne drawMapChunkYLoop
-	
+	beq drawMapChunkDone
+	jmp drawMapChunkYLoop
+
+drawMapChunkDone:	
 	rts
 	
 drawCursor:
@@ -605,4 +638,24 @@ drawMenuCursor:
 	sta $0201
 	
 drawCursorDone:
+	rts
+	
+; You know how it goes, param1 type, param2 Xposition, param3 Yposition
+; clobbers X
+placeTileInBuffer:
+	lda tileBufferLength ; bufferlength * 4 is the start position of the new item in the buffer to place
+	asl a
+	asl a
+	tax 
+	lda param1
+	sta tileBuffer, x ; tiletype stored in param1 for now
+	inx
+	lda param2
+	sta tileBuffer, x ; x value stored in param2 for now 
+	inx
+	lda param3
+	sta tileBuffer, x ; y value directly stored in Y
+	
+	inc tileBufferLength
+	
 	rts
