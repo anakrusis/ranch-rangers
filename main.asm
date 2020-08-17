@@ -15,6 +15,8 @@ param8 .rs 1
 param9 .rs 1
 	
 globalTick .rs 1 ; For everything
+turn .rs 1       ; 00 = player 1, 01 = player 2
+season .rs 1     ; 00 = spring, 01 = summer, 02 = autumn, 03 = winter
 
 ; read the docs on this one lol... It Means Many Things
 guiMode .rs 1 
@@ -40,12 +42,12 @@ buttons2 .rs 1
 prevButtons1 .rs 1
 prevButtons2 .rs 1
 
-	.rsset $0100
+	.rsset $0100 ; Try not to add anything more here either, or else you might risk hitting the stack
 tileBufferLength .rs 1
 tileBufferIndex  .rs 1
 tileBuffer .rs 64
 
-	.rsset $0400
+	.rsset $0400 ; Hey 400 page is full, dont add anything more here
 MapData .rs 192 ; the whole mapa xD
 
 p1PiecesX    .rs 8
@@ -60,6 +62,9 @@ p1UnitCount .rs 1
 p2UnitCount .rs 1
 p1Gold .rs 1
 p2Gold .rs 1
+
+	.rsset $0600
+turnAnimTimer .rs 1
 
 	.rsset $0700
 attributesBuffer .rs 64
@@ -172,6 +177,32 @@ ReadControllerLoop:
     rol buttons2    ; Carry -> bit 0; bit 7 -> Carry
     bcc ReadControllerLoop
 	
+	
+TurnScreenTimer:
+	; Little timing based code for the turn indicator
+	lda guiMode
+	cmp #$07
+	beq TurnScreenClear
+	cmp #$08
+	beq TurnScreenClear
+	jmp TurnScreenTimerDone
+	
+TurnScreenClear:
+	
+	dec turnAnimTimer
+
+	lda turnAnimTimer
+	cmp #$00
+	bne TurnScreenTimerDone
+	
+	lda #$01
+	sta guiMode
+	
+	jsr closeCurrentTextBox
+	jsr updateHotbar
+
+TurnScreenTimerDone:
+	
 	jsr InputHandler
 	
 	jsr FamiToneUpdate
@@ -236,32 +267,10 @@ CopyMapLoop:
 	dex
 	bne CopyMapLoop
 	
-TextBoxTest:
-	lda #$01
-	sta param4
-	lda #$01
-	sta param5
-	lda #$0e
-	sta param6
-	lda #$02
-	sta param7
-	
-	jsr drawTextBox
-	
-StringTest:
-	lda #$20
-	sta strPPUAddress
-	lda #$63
-	sta strPPUAddress + 1
-	
-	lda #LOW(text_EngineTitle)
-    sta stringPtr
-    lda #HIGH(text_EngineTitle)
-    sta stringPtr+1
-	
 EndInit:
 	jsr drawMap
 	jsr initGameState
+	jsr player1TurnStart
 
 	lda #$90
     sta $2000   ;enable NMIs
@@ -279,72 +288,6 @@ EndInit:
 	
 forever:
     jmp forever
-
-; no arguments, fills both nametables with 24 (blank blue character). bulk drawing only! wayyy too much for vblank!	
-clearScreen:
-	lda $2002
-	lda #$20
-	sta $2006
-	lda #$00
-	sta $2006
-	
-	ldx #$00
-BGLoop:
-	lda #$24 ; blank blue tile
-	sta $2007
-	sta $2007
-	sta $2007
-	sta $2007
-	inx
-	cpx #$f0
-	bne BGLoop 
-	
-loadAttr:
-	lda $2002   
-	lda #$23
-	sta $2006   
-	lda #$C0
-	sta $2006   
-	ldx #$00
-attrLoop:
-	lda #$00 ; all the first palette
-	sta $2007 
-	inx
-	cpx #$40
-	bne attrLoop
-	
-	lda $2002
-	lda #$24
-	sta $2006
-	lda #$00
-	sta $2006
-	
-	ldx #$00
-SecondBGLoop:
-	lda #$24 ; blank blue tile
-	sta $2007
-	sta $2007
-	sta $2007
-	sta $2007
-	inx
-	cpx #$f0
-	bne SecondBGLoop 
-	
-loadSecondAttr:
-	lda $2002   
-	lda #$27
-	sta $2006   
-	lda #$C0
-	sta $2006   
-	ldx #$00
-secondAttrLoop:
-	lda #$00 ; all the first palette
-	sta $2007 
-	inx
-	cpx #$40
-	bne secondAttrLoop
-	
-	rts
 	
 initGameState:
 	lda #$01
@@ -377,57 +320,48 @@ initGameState:
 	rts
 	
 textboxBuildOpen:
-	lda #$05
-	sta param4
-	sta param5
-	sta param6
-	lda #$03
-	sta param7
-	jsr drawTextBox
 	
 	lda #LOW(text_BuildMenu)
     sta stringPtr
     lda #HIGH(text_BuildMenu)
     sta stringPtr+1
 	
-	lda #$02
-	sta menuSize
-	
 	jsr initNewTextBox
 	
 	rts
 	
-textboxUnitOpen:
-	lda #$0a
-	sta param4
-	lda #$05
-	sta param5
-	sta param6
-	lda #$05
-	sta param7
-	jsr drawTextBox
+textboxUnitOpen:	
 	
 	lda #LOW(text_UnitMenu)
     sta stringPtr
     lda #HIGH(text_UnitMenu)
     sta stringPtr+1
 	
-	lda #$03
-	sta menuSize
-	
 	jsr initNewTextBox
 	
 	rts
 	
 initNewTextBox:
-	lda param4
+	ldx guiMode
+
+	lda GuiX, x
 	sta activeGuiX
-	lda param5
+	sta param4
+	
+	lda GuiY, x
 	sta activeGuiY
-	lda param6
+	sta param5
+	
+	lda GuiWidths, x
 	sta activeGuiWidth
-	lda param7
+	sta param6
+	
+	lda GuiHeights, x
 	sta activeGuiHeight
+	sta param7
+	
+	lda GuiMenuSizes, x
+	sta menuSize
 	
 	lda #$00
 	sta menuCursorPos
@@ -461,6 +395,8 @@ initNewTextBox:
 	adc #$02   ; just convention, but text on textboxes always starts two tiles to the right (gives room for a cursor)
 	sta strPPUAddress+1
 	
+	jsr drawTextBox
+	
 	rts
 	
 closeCurrentTextBox:
@@ -474,6 +410,62 @@ closeCurrentTextBox:
 	sta param7
 	
 	jsr drawMapChunk
+	rts
+	
+player1TurnStart:
+
+	lda #$80
+	sta turnAnimTimer
+	
+	lda #$07
+	sta guiMode
+	
+	lda #LOW(text_Player1Turn)
+    sta stringPtr
+    lda #HIGH(text_Player1Turn)
+    sta stringPtr+1
+	
+	jsr initNewTextBox
+	
+	rts
+	
+player2TurnStart:
+
+	lda #$80
+	sta turnAnimTimer
+	
+	lda #$08
+	sta guiMode
+	
+	lda #LOW(text_Player2Turn)
+    sta stringPtr
+    lda #HIGH(text_Player2Turn)
+    sta stringPtr+1
+	
+	jsr initNewTextBox
+	
+	rts
+	
+endTurn:
+	lda turn
+	cmp #$00
+	beq p1EndTurn
+	cmp #$01
+	beq p2EndTurn
+	rts	
+
+p1EndTurn:
+	lda #$01 ; now it's player 2's turn
+	sta turn
+	jsr player2TurnStart
+	
+	rts
+	
+p2EndTurn:
+	lda #$00 ; now it's player 1's turn
+	sta turn
+	jsr player1TurnStart
+	
 	rts
 	
 ; X and Y pos: param4 and param5
@@ -611,7 +603,7 @@ text_TheLicc:
 	.db $1d, $31, $2e, $24, $15, $32, $2c, $2c, $ff ; "THE LICC"
 	
 text_EngineTitle:	
-	.db $0f, $0a, $1b, $16, $24, $08, $27, $01, $06, $27, $02, $00, $02, $00, $ff ; farm 8/16/2020
+	.db $0f, $0a, $1b, $16, $24, $08, $27, $01, $07, $27, $02, $00, $02, $00, $ff ; farm 8/16/2020
 	
 text_Icle:
 	.db $12, $0c, $15, $0e, $ff ; icle
@@ -621,7 +613,25 @@ text_BuildMenu:
 	
 text_UnitMenu:
 	.db $1e, $17, $12, $1d, $fe, $0c, $11, $12, $0c, $14, $0e, $17, $ff
+	
+text_Player1Turn
+	.db $2a, $fe, $19, $15, $0a, $22, $0e, $1b, $24, $01, $25, $1c, $24, $1d, $1e, $1b, $17, $26, $ff
+	
+text_Player2Turn
+	.db $2a, $fe, $19, $15, $0a, $22, $0e, $1b, $24, $02, $25, $1c, $24, $1d, $1e, $1b, $17, $26, $ff
+	
+GuiX:
+	.db $01, $01, $05, $0a, $01, $01, $01, $03, $03
+GuiY:
+	.db $01, $01, $05, $05, $01, $01, $01, $06, $06
+GuiWidths:
+	.db $01, $01, $05, $05, $01, $01, $01, $0a, $0a
+GuiHeights:
+	.db $01, $01, $03, $05, $01, $01, $01, $02, $02
+GuiMenuSizes:
+	.db $00, $00, $02, $03, $01, $01, $01, $00, $00
 
+	
 Song:
 	.db $7f, $20, $02, $25, $0c ; fantasia in funk
 	.db $7f, $7f, $7f, $3f, $20, $02, $25, $0c 

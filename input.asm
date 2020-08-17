@@ -102,6 +102,7 @@ PlaceFarm:
 	lda #$01
 	sta guiMode
 	jsr closeCurrentTextBox
+	jsr endTurn
 	
 	jmp InputADone
 	

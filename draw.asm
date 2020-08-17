@@ -1,3 +1,69 @@
+; no arguments, fills both nametables with 24 (blank blue character). bulk drawing only! wayyy too much for vblank!	
+clearScreen:
+	lda $2002
+	lda #$20
+	sta $2006
+	lda #$00
+	sta $2006
+	
+	ldx #$00
+BGLoop:
+	lda #$24 ; blank blue tile
+	sta $2007
+	sta $2007
+	sta $2007
+	sta $2007
+	inx
+	cpx #$f0
+	bne BGLoop 
+	
+loadAttr:
+	lda $2002   
+	lda #$23
+	sta $2006   
+	lda #$C0
+	sta $2006   
+	ldx #$00
+attrLoop:
+	lda #$00 ; all the first palette
+	sta $2007 
+	inx
+	cpx #$40
+	bne attrLoop
+	
+	lda $2002
+	lda #$24
+	sta $2006
+	lda #$00
+	sta $2006
+	
+	ldx #$00
+SecondBGLoop:
+	lda #$24 ; blank blue tile
+	sta $2007
+	sta $2007
+	sta $2007
+	sta $2007
+	inx
+	cpx #$f0
+	bne SecondBGLoop 
+	
+loadSecondAttr:
+	lda $2002   
+	lda #$27
+	sta $2006   
+	lda #$C0
+	sta $2006   
+	ldx #$00
+secondAttrLoop:
+	lda #$00 ; all the first palette
+	sta $2007 
+	inx
+	cpx #$40
+	bne secondAttrLoop
+	
+	rts
+
 ; tile type in param1, X and Y position of tile in param2 and param3
 ; attr in param8? maybe it should be optional? (it was added on later don't judge xD)
 
@@ -452,7 +518,39 @@ drawMapChunkXLoop:
 	; iterating through each players units and seeing if their coordinates match up with the X/Y iterators.
 	; If so, it loads those metatiles to the buffer and skips the tile rendering.
 	
-	; todo player 1's pieces also
+	; first iterating through PLAYER 1 UNITS:
+	
+		ldx #$00
+scanP1PiecesLoop:
+	lda p1PiecesX, x
+	cmp param2
+	bne scanP1PiecesLoopTail
+	
+	lda p1PiecesY, x
+	clc
+	adc #MAP_DRAW_Y
+	cmp param3
+	bne scanP1PiecesLoopTail
+	
+	lda p1PiecesType, x           ; if both the X and Y coordinates match, then add the unit to the buffer
+	clc 
+	adc #$04
+	sta param1
+	; param2 and param3 are already set up and good to go
+	
+	jsr placeTileInBuffer
+	
+	pla ; before leaving the player unit iteration loop, we have to restore the original x and y registers!
+	tax
+	
+	jmp drawMapChunkXLoopTail
+	
+scanP1PiecesLoopTail:
+	inx
+	cpx p1UnitCount
+	bne scanP1PiecesLoop
+	
+	; Now checking PLAYER 2 UNITS:
 	
 	ldx #$00    ; here the x register is used to iterate through all of player 2's units
 scanP2PiecesLoop:
@@ -532,8 +630,10 @@ drawMapChunkXLoopTail: ; here the temp variables in param2&3 are generated to de
 	
 	inx
 	cpx param2
-	bne drawMapChunkXLoop
+	beq drawMapRowDone
+	jmp drawMapChunkXLoop
 
+drawMapRowDone:
 	lda param5 ; param3 = (y + height)
 	clc
 	adc param7
@@ -601,7 +701,9 @@ hideMapCursor:
 	sta $0208
 	sta $020c
 	
-	lda guiMode
+	; A menu with 0 options (a plain textbox) means no cursor is drawn.
+	ldx guiMode
+	lda GuiMenuSizes, x
 	cmp #$00
 	bne drawMenuCursor
 	jmp drawCursorDone
@@ -657,5 +759,30 @@ placeTileInBuffer:
 	sta tileBuffer, x ; y value directly stored in Y
 	
 	inc tileBufferLength
+	
+	rts
+	
+updateHotbar:
+	lda #$01
+	sta param4
+	lda #$01
+	sta param5
+	lda #$0e
+	sta param6
+	lda #$02
+	sta param7
+	
+	jsr drawTextBox
+	
+StringTest:
+	lda #$20
+	sta strPPUAddress
+	lda #$63
+	sta strPPUAddress + 1
+	
+	lda #LOW(text_EngineTitle)
+    sta stringPtr
+    lda #HIGH(text_EngineTitle)
+    sta stringPtr+1
 	
 	rts
