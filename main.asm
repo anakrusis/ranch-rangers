@@ -16,7 +16,9 @@ param9 .rs 1
 	
 globalTick .rs 1 ; For everything
 turn .rs 1       ; 00 = player 1, 01 = player 2
+turnCount .rs 2
 season .rs 1     ; 00 = spring, 01 = summer, 02 = autumn, 03 = winter
+seasonTurnCounter .rs 1
 
 ; read the docs on this one lol... It Means Many Things
 guiMode .rs 1 
@@ -67,13 +69,18 @@ p2Gold .rs 1
 turnAnimTimer .rs 1
 
 	.rsset $0700
-attributesBuffer .rs 64
+attributesBuffer   .rs 64
+stringBufferLength .rs 1
+stringBufferIndex  .rs 1
+stringBuffer       .rs 32
 
 JOYPAD1 = $4016
 JOYPAD2 = $4017
-MAP_DRAW_Y = $03
 
+MAP_DRAW_Y = $03
 MAX_METATILE_CHANGES = $03 ; per frame, 12 tiles per frame
+
+SEASONS_LENGTH_IN_TURNS = $03
 
 ;----- first 8k bank of PRG-ROM    
     .bank 0
@@ -198,6 +205,8 @@ TurnScreenClear:
 	lda #$01
 	sta guiMode
 	
+	jsr changeSeasonPalette
+	
 	jsr closeCurrentTextBox
 	jsr updateHotbar
 
@@ -235,20 +244,6 @@ clearmem:
 vblankwait2:
 	bit $2002
 	bpl vblankwait2
-	
-initPalette:
-	lda $2002
-	lda #$3F
-	sta $2006   
-	lda #$00
-	sta $2006    
-	ldx #$00
-paletteLoop:
-	lda BackgroundPalette, x
-	sta $2007
-	inx
-	cpx #$20
-	bne paletteLoop
 	
 	jsr clearScreen
 	
@@ -292,6 +287,9 @@ forever:
 initGameState:
 	lda #$01
 	sta guiMode ; main guimode
+	
+	lda #$00
+	sta season ; season is set to spring
 	
 	lda #$04     ; player 1 farmer spawned
 	sta param4
@@ -447,6 +445,22 @@ player2TurnStart:
 	rts
 	
 endTurn:
+	inc turnCount
+	inc seasonTurnCounter
+	
+	lda seasonTurnCounter
+	cmp #SEASONS_LENGTH_IN_TURNS
+	bne evaluateTurn
+	
+	lda #$00
+	sta seasonTurnCounter
+	
+	inc season
+	lda season
+	and #$03
+	sta season ; season cannot exceed 3
+
+evaluateTurn:
 	lda turn
 	cmp #$00
 	beq p1EndTurn
@@ -595,8 +609,16 @@ CursorSpriteData:
 	.db $08, $80, %10000011, $00 
 	.db $08, $80, %11000011, $08 
 	
-BackgroundPalette:
-	.db $2a, $30, $11, $38, $2a, $17, $0a, $1a, $2a, $05, $27, $30, $2a, $03, $24, $30 ; bg
+springPalette:
+	.db $2a, $30, $11, $38, $2a, $17, $0a, $1a, $2a, $05, $27, $30, $2a, $03, $24, $30
+summerPalette:
+	.db $29, $30, $11, $38, $29, $17, $08, $18, $29, $05, $27, $30, $29, $03, $24, $30
+fallPalette:
+	.db $28, $30, $11, $38, $28, $16, $07, $17, $28, $05, $27, $30, $28, $03, $24, $30
+winterPalette:
+	.db $22, $30, $11, $38, $22, $17, $10, $20, $22, $05, $27, $30, $22, $03, $24, $30
+	
+spritePalette:
 	.db $2a, $15, $27, $30, $2a, $14, $24, $34, $2a, $14, $24, $34, $2a, $14, $24, $34 ; sprites
 	
 text_TheLicc:
@@ -614,11 +636,23 @@ text_BuildMenu:
 text_UnitMenu:
 	.db $1e, $17, $12, $1d, $fe, $0c, $11, $12, $0c, $14, $0e, $17, $ff
 	
-text_Player1Turn
+text_Player1Turn:
 	.db $2a, $fe, $19, $15, $0a, $22, $0e, $1b, $24, $01, $25, $1c, $24, $1d, $1e, $1b, $17, $26, $ff
 	
-text_Player2Turn
+text_Player2Turn:
 	.db $2a, $fe, $19, $15, $0a, $22, $0e, $1b, $24, $02, $25, $1c, $24, $1d, $1e, $1b, $17, $26, $ff
+	
+text_Spring:
+	.db $1c, $19, $1b, $12, $17, $10, $ff
+	
+text_Summer:
+	.db $1c, $1e, $16, $16, $0e, $1b, $ff
+	
+text_Fall:
+	.db $0f, $0a, $15, $15, $ff
+	
+text_Winter:
+	.db $20, $12, $17, $1d, $0e, $1b, $ff
 	
 GuiX:
 	.db $01, $01, $05, $0a, $01, $01, $01, $03, $03

@@ -1,5 +1,36 @@
 ; no arguments, fills both nametables with 24 (blank blue character). bulk drawing only! wayyy too much for vblank!	
 clearScreen:
+
+initPalette:
+	lda $2002
+	lda #$3F
+	sta $2006   
+	lda #$10
+	sta $2006 
+	
+	ldx #$00
+SpritePaletteLoop:          ; sprites first
+	lda spritePalette, x
+	sta $2007
+	inx
+	cpx #$10
+	bne SpritePaletteLoop
+	
+	lda $2002
+	lda #$3F
+	sta $2006   
+	lda #$00
+	sta $2006 
+	
+	ldx #$00
+BGPaletteLoop:              ; then the background palettes
+	lda springPalette, x
+	sta $2007
+	inx
+	cpx #$10
+	bne BGPaletteLoop
+
+initNametables:
 	lda $2002
 	lda #$20
 	sta $2006
@@ -61,6 +92,38 @@ secondAttrLoop:
 	inx
 	cpx #$40
 	bne secondAttrLoop
+	
+	rts
+	
+changeSeasonPalette:
+
+	;lda #%00000110 ; background and sprites disabled
+	;lda $2001
+
+	lda $2002
+	lda #$3F
+	sta $2006   
+	lda #$00
+	sta $2006 
+	
+	lda season
+	asl a
+	asl a
+	asl a
+	asl a
+	tay
+	
+	ldx #$00
+seasonPaletteLoop:
+	lda springPalette, y
+	sta $2007
+	inx
+	iny
+	cpx #$10
+	bne seasonPaletteLoop
+	
+	;lda #%00011110 ; background and sprites enabled
+	;lda $2001
 	
 	rts
 
