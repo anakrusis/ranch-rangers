@@ -39,17 +39,23 @@ InputA:
 	lda buttons1
 	and #$80
 	cmp #$80
-	bne InputADone
+	beq InputACheckPrev
+	jmp InputADone
 	
+InputACheckPrev:
 	lda prevButtons1
 	and #$80
 	cmp #$80
-	beq InputADone
+	bne InputABufferCheck
+	jmp InputADone
 	
+InputABufferCheck:
 	lda tileBufferLength
 	cmp #$00
-	bne InputADone
+	beq InputAGuimodeCheck
+	jmp InputADone
 	
+InputAGuimodeCheck:
 	lda guiMode
 	cmp #$00
 	beq InputAPauseScreen
@@ -57,6 +63,9 @@ InputA:
 	beq InputAMainScreen
 	cmp #$02
 	beq InputABuildScreen
+	cmp #$03
+	beq InputAUnitScreen
+	
 	jmp InputADone
 	
 InputAMainScreen:
@@ -73,6 +82,11 @@ InputABuildScreen:
 	beq PlaceFarm
 	cmp #$00
 	beq UnitMenu
+	
+InputAUnitScreen:
+	lda menuCursorPos
+	cmp #$00
+	beq PlaceChicken
 
 PlaceFarm:
 	lda cursorY
@@ -105,23 +119,28 @@ PlaceFarm:
 	jmp InputADone
 	
 UnitMenu:
-	
 	lda #$03
 	sta guiMode
 	jsr openTextBox
 	jmp InputADone
 	
-	;                ; this code adds a farm tile directly to the gfx buffer (DOESNT EDIT THE MAP)
-	; lda #$03
-	; sta tileBuffer
-	; lda #$01
-	; sta tileBufferLength
-	; lda cursorX
-	; sta tileBuffer + 1
-	; lda cursorY
-	; clc
-	; adc #$03
-	; sta tileBuffer + 2
+PlaceChicken:
+	lda cursorX
+	sta param4
+	lda cursorY
+	sta param5
+	lda #$01
+	sta param6
+	lda #$00
+	sta param7
+	jsr placeUnit
+	
+	lda #$02
+	sta guiMode
+	jsr closeCurrentTextBox
+	jsr endTurn
+	
+	jmp InputADone
 	
 InputADone:
 

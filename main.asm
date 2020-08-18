@@ -45,9 +45,7 @@ prevButtons1 .rs 1
 prevButtons2 .rs 1
 
 	.rsset $0100 ; Try not to add anything more here either, or else you might risk hitting the stack
-tileBufferLength .rs 1
-tileBufferIndex  .rs 1
-tileBuffer .rs 64
+
 
 	.rsset $0400 ; Hey 400 page is full, dont add anything more here
 MapData .rs 192 ; the whole mapa xD
@@ -67,6 +65,9 @@ p2Gold .rs 1
 
 	.rsset $0600
 turnAnimTimer .rs 1
+tileBufferLength .rs 1
+tileBufferIndex  .rs 1
+tileBuffer .rs 64
 
 	.rsset $0700
 attributesBuffer   .rs 64
@@ -209,6 +210,16 @@ TurnScreenClear:
 	
 	jsr closeCurrentTextBox
 	jsr updateHotbar
+	
+	lda #$05   ; A center chunk of the screen gets refreshed at this time because of a GUI issue with opening multiple windows
+	sta param4
+	lda #$06
+	sta param5
+	lda #$05
+	sta param6
+	lda #$03
+	sta param7
+	jsr drawMapChunk
 
 TurnScreenTimerDone:
 	
@@ -636,7 +647,7 @@ text_Winter:
 GuiX:
 	.db $01, $01, $05, $0a, $05, $01, $01, $03, $03
 GuiY:
-	.db $01, $01, $05, $05, $05, $01, $01, $06, $06
+	.db $01, $01, $06, $06, $06, $01, $01, $06, $06
 GuiWidths:
 	.db $01, $01, $05, $05, $05, $01, $01, $0a, $0a
 GuiHeights:
