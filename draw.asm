@@ -583,7 +583,7 @@ drawMapChunkXLoop:
 	
 	; first iterating through PLAYER 1 UNITS:
 	
-		ldx #$00
+	ldx #$00
 scanP1PiecesLoop:
 	lda p1PiecesX, x
 	cmp param2

@@ -80,7 +80,7 @@ JOYPAD2 = $4017
 MAP_DRAW_Y = $03
 MAX_METATILE_CHANGES = $03 ; per frame, 12 tiles per frame
 
-SEASONS_LENGTH_IN_TURNS = $03
+SEASONS_LENGTH_IN_TURNS = $05
 
 ;----- first 8k bank of PRG-ROM    
     .bank 0
@@ -319,29 +319,7 @@ initGameState:
 	
 	rts
 	
-textboxBuildOpen:
-	
-	lda #LOW(text_BuildMenu)
-    sta stringPtr
-    lda #HIGH(text_BuildMenu)
-    sta stringPtr+1
-	
-	jsr initNewTextBox
-	
-	rts
-	
-textboxUnitOpen:	
-	
-	lda #LOW(text_UnitMenu)
-    sta stringPtr
-    lda #HIGH(text_UnitMenu)
-    sta stringPtr+1
-	
-	jsr initNewTextBox
-	
-	rts
-	
-initNewTextBox:
+openTextBox:
 	ldx guiMode
 
 	lda GuiX, x
@@ -362,6 +340,11 @@ initNewTextBox:
 	
 	lda GuiMenuSizes, x
 	sta menuSize
+	
+	lda GuiPointerLow, x
+    sta stringPtr
+    lda GuiPointerHigh, x
+    sta stringPtr+1
 	
 	lda #$00
 	sta menuCursorPos
@@ -419,13 +402,7 @@ player1TurnStart:
 	
 	lda #$07
 	sta guiMode
-	
-	lda #LOW(text_Player1Turn)
-    sta stringPtr
-    lda #HIGH(text_Player1Turn)
-    sta stringPtr+1
-	
-	jsr initNewTextBox
+	jsr openTextBox
 	
 	rts
 	
@@ -436,13 +413,7 @@ player2TurnStart:
 	
 	lda #$08
 	sta guiMode
-	
-	lda #LOW(text_Player2Turn)
-    sta stringPtr
-    lda #HIGH(text_Player2Turn)
-    sta stringPtr+1
-	
-	jsr initNewTextBox
+	jsr openTextBox
 	
 	rts
 	
@@ -644,6 +615,12 @@ text_Player1Turn:
 text_Player2Turn:
 	.db $2a, $fe, $19, $15, $0a, $22, $0e, $1b, $24, $02, $25, $1c, $24, $1d, $1e, $1b, $17, $26, $ff
 	
+text_FarmerMenu:
+	.db $0f, $0a, $1b, $16, $0e, $1b, $fe, $16, $18, $1f, $0e, $ff
+	
+text_ChickenMenu:
+	.db $0c, $11, $12, $0c, $14, $0e, $17, $fe, $0a, $1d, $1d, $0a, $0c, $14, $fe, $16, $18, $1f, $0e, $fe, $1b, $0e, $16, $18, $1f, $0e, $ff
+	
 text_Spring:
 	.db $1c, $19, $1b, $12, $17, $10, $ff
 	
@@ -657,16 +634,21 @@ text_Winter:
 	.db $20, $12, $17, $1d, $0e, $1b, $ff
 	
 GuiX:
-	.db $01, $01, $05, $0a, $01, $01, $01, $03, $03
+	.db $01, $01, $05, $0a, $05, $01, $01, $03, $03
 GuiY:
-	.db $01, $01, $05, $05, $01, $01, $01, $06, $06
+	.db $01, $01, $05, $05, $05, $01, $01, $06, $06
 GuiWidths:
-	.db $01, $01, $05, $05, $01, $01, $01, $0a, $0a
+	.db $01, $01, $05, $05, $05, $01, $01, $0a, $0a
 GuiHeights:
-	.db $01, $01, $03, $05, $01, $01, $01, $02, $02
+	.db $01, $01, $03, $05, $02, $01, $01, $02, $02
 GuiMenuSizes:
 	.db $00, $00, $02, $03, $01, $01, $01, $00, $00
+	
+GuiPointerLow:
+	.db $00, LOW(text_EngineTitle), LOW(text_BuildMenu), LOW(text_UnitMenu), LOW(text_FarmerMenu), LOW(text_ChickenMenu), $00, LOW(text_Player1Turn), LOW(text_Player2Turn)
 
+GuiPointerHigh:
+	.db $00, HIGH(text_EngineTitle), HIGH(text_BuildMenu), HIGH(text_UnitMenu), HIGH(text_FarmerMenu), HIGH(text_ChickenMenu), $00, HIGH(text_Player1Turn), HIGH(text_Player2Turn)
 	
 Song:
 	.db $7f, $20, $02, $25, $0c ; fantasia in funk
