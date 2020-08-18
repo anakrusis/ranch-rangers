@@ -1,0 +1,2 @@
+test song better.ftm:         1040 bytes (A LOT)
+test song more compact.ftm:   859 bytes (somewhat less)

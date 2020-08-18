@@ -273,14 +273,6 @@ EndInit:
 	lda #%00011110 ; background and sprites enabled
 	lda $2001
 	
-	lda #$01 ; ntsc
-	ldx #LOW(song_music_data)
-	ldy #HIGH(song_music_data)
-	jsr FamiToneInit
-	
-	lda #$00
-	jsr FamiToneMusicPlay
-	
 forever:
     jmp forever
 	
@@ -315,6 +307,16 @@ initGameState:
 	lda #$05
 	sta activeGuiX
 	sta activeGuiY
+	
+	; initialize music!!
+	lda #$01 ; ntsc
+	ldx #LOW(song_music_data)
+	ldy #HIGH(song_music_data)
+	jsr FamiToneInit
+	
+	lda #$00
+	jsr FamiToneMusicPlay
+	
 	rts
 	
 textboxBuildOpen:
@@ -554,8 +556,8 @@ UnitLoaded:
 ; The first four correspond to the map tile IDs
 MetaTiles:
 	.db $43, $43, $43, $43 ;water
-	.db $60, $61, $70, $71 ;trees
-	.db $40, $40, $40, $40 ;grass
+	.db $62, $63, $72, $73 ;trees
+	.db $41, $40, $40, $40 ;grass
 	.db $42, $42, $42, $42 ;farm
 	
 ; the next correspond to unit IDs
@@ -583,7 +585,7 @@ Player2UnitMetaTiles:
 	.db $00, $00, $00, $00 ;reserved
 	
 MetaTileAttributes:
-	.db $00, $55, $00, $55 ; map tiles
+	.db $00, $55, $55, $55 ; map tiles
 	.db $aa, $aa, $aa, $aa ; player 1 tiles
 	.db $00, $00, $00, $00, $00, $00, $00, $00, $00 ; textbox tiles
 	.db $ff, $ff, $ff, $ff ; player 2 tiles
@@ -616,7 +618,7 @@ summerPalette:
 fallPalette:
 	.db $28, $30, $11, $38, $28, $16, $07, $17, $28, $05, $27, $30, $28, $03, $24, $30
 winterPalette:
-	.db $22, $30, $11, $38, $22, $17, $10, $20, $22, $05, $27, $30, $22, $03, $24, $30
+	.db $3c, $30, $11, $38, $3c, $15, $0a, $2c, $3c, $05, $27, $30, $3c, $03, $24, $30
 	
 spritePalette:
 	.db $2a, $15, $27, $30, $2a, $14, $24, $34, $2a, $14, $24, $34, $2a, $14, $24, $34 ; sprites
