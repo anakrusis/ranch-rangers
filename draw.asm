@@ -262,11 +262,6 @@ setAttributeAddDone:
 	adc #$23			
 	sta tilePPUAddress
 	
-	lda tilePPUAddress
-	sta teste
-	lda tilePPUAddress + 1
-	sta teste + 1
-	
 	lda $2002
 	lda tilePPUAddress
 	sta $2006

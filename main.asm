@@ -51,10 +51,11 @@ prevButtons2 .rs 1
 MapData .rs 192 ; the whole mapa xD
 
 p1PiecesX    .rs 8
-p2PiecesX    .rs 8
 p1PiecesY    .rs 8
-p2PiecesY    .rs 8
 p1PiecesType .rs 8
+
+p2PiecesX    .rs 8
+p2PiecesY    .rs 8
 p2PiecesType .rs 8
 
 	.rsset $0500
@@ -148,6 +149,7 @@ TileBufferHandlerDone:
 	jsr drawCursor
 
 DrawDone:
+
 	lda #%10010000   ; enable NMI, sprites from Pattern Table 0, background from Pattern Table 1
 	sta $2000
 	lda #%00011110   ; enable sprites, enable background, no clipping on left side
@@ -645,15 +647,15 @@ text_Winter:
 	.db $20, $12, $17, $1d, $0e, $1b, $ff
 	
 GuiX:
-	.db $01, $01, $05, $0a, $05, $01, $01, $03, $03
+	.db $01, $01, $05, $0a, $05, $05, $01, $03, $03
 GuiY:
-	.db $01, $01, $06, $06, $06, $01, $01, $06, $06
+	.db $01, $01, $06, $06, $06, $06, $01, $06, $06
 GuiWidths:
-	.db $01, $01, $05, $05, $05, $01, $01, $0a, $0a
+	.db $01, $01, $05, $05, $05, $05, $01, $0a, $0a
 GuiHeights:
-	.db $01, $01, $03, $05, $02, $01, $01, $02, $02
+	.db $01, $01, $03, $05, $02, $04, $01, $02, $02
 GuiMenuSizes:
-	.db $00, $00, $02, $03, $01, $01, $01, $00, $00
+	.db $00, $00, $02, $03, $01, $03, $01, $00, $00
 	
 GuiPointerLow:
 	.db $00, LOW(text_EngineTitle), LOW(text_BuildMenu), LOW(text_UnitMenu), LOW(text_FarmerMenu), LOW(text_ChickenMenu), $00, LOW(text_Player1Turn), LOW(text_Player2Turn)
