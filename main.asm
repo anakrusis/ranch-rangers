@@ -44,8 +44,8 @@ buttons2 .rs 1
 prevButtons1 .rs 1
 prevButtons2 .rs 1
 
-	.rsset $0100 ; Try not to add anything more here either, or else you might risk hitting the stack
-
+	.rsset $0100 ; Try not to add too much, or else you might risk hitting the stack
+dpadInputTimer .rs 1
 
 	.rsset $0400 ; Hey 400 page is full, dont add anything more here
 MapData .rs 192 ; the whole mapa xD
@@ -611,7 +611,7 @@ text_TheLicc:
 	.db $1d, $31, $2e, $24, $15, $32, $2c, $2c, $ff ; "THE LICC"
 	
 text_EngineTitle:	
-	.db $0f, $0a, $1b, $16, $24, $08, $27, $01, $07, $27, $02, $00, $02, $00, $ff ; farm 8/16/2020
+	.db $1b, $1b, $28, $08, $27, $01, $09, $27, $02, $00, $02, $00, $ff ; farm 8/19/2020
 	
 text_Icle:
 	.db $12, $0c, $15, $0e, $ff ; icle
@@ -620,7 +620,7 @@ text_BuildMenu:
 	.db $0b, $1e, $12, $15, $0d, $fe, $1e, $17, $12, $1d, $fe, $0f, $0a, $1b, $16, $ff
 	
 text_UnitMenu:
-	.db $1e, $17, $12, $1d, $fe, $0c, $11, $12, $0c, $14, $0e, $17, $ff
+	.db $1e, $17, $12, $1d, $fe, $0c, $11, $12, $0c, $14, $0e, $17, $fe, $0c, $18, $20, $ff
 	
 text_Player1Turn:
 	.db $2a, $fe, $19, $15, $0a, $22, $0e, $1b, $24, $01, $25, $1c, $24, $1d, $1e, $1b, $17, $26, $ff

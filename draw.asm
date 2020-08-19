@@ -835,7 +835,7 @@ updateHotbar:
 StringTest:
 	lda #$20
 	sta strPPUAddress
-	lda #$63
+	lda #$43
 	sta strPPUAddress + 1
 	
 	lda #LOW(text_EngineTitle)

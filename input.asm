@@ -74,6 +74,8 @@ InputAGuimodeCheck:
 	beq InputABuildScreen
 	cmp #$03
 	beq InputAUnitScreen
+	cmp #$04
+	beq InputAFarmerScreen
 	
 	jmp InputADone
 	
@@ -96,6 +98,15 @@ InputAUnitScreen:
 	lda menuCursorPos
 	cmp #$00
 	beq PlaceChicken
+	cmp #$01
+	beq PlaceCow
+	jmp InputADone
+	
+InputAFarmerScreen:
+	lda #$09
+	sta guiMode
+	jsr closeCurrentTextBox
+	jmp InputADone
 
 PlaceFarm:
 	lda cursorY
@@ -151,107 +162,159 @@ PlaceChicken:
 	
 	jmp InputADone
 	
+PlaceCow:
+	lda cursorX
+	sta param4
+	lda cursorY
+	sta param5
+	lda #$02
+	sta param6
+	lda turn
+	sta param7
+	jsr placeUnit
+	
+	lda #$02
+	sta guiMode
+	jsr closeCurrentTextBox
+	jsr endTurn
+	
+	jmp InputADone
+	
 InputADone:
-
-	; Control Pad inputs only happen every 4 frames
-	lda globalTick
-	and #$03
+DpadCheckGuimode:
+	lda guiMode
+	cmp #$01
+	beq DpadMainScreen
+	cmp #$09
+	beq DpadMainScreen
+	jmp DpadMenuScreen
+	
+DpadMainScreen:
+	lda buttons1
+	and #$0f
 	cmp #$00
-	beq InputRight
+	bne DpadHandleTimer
 	jmp InputHandlerDone
 
-InputRight:
+DpadHandleTimer:
+	dec dpadInputTimer
+	
+	lda prevButtons1
+	and #$0f
+	cmp #$00
+	beq DpadResetTimer
+	jmp DpadHandleInputs
+	
+DpadResetTimer:
+	lda #$00
+	sta dpadInputTimer
+
+DpadHandleInputs:
+	lda dpadInputTimer
+	and #$07
+	cmp #$00
+	beq MainScrnInputRight
+	jmp InputHandlerDone
+	
+MainScrnInputRight:
 	lda buttons1
 	and #$01
 	cmp #$01
-	bne InputRightDone
-	
-	lda guiMode
-	cmp #$01
-	bne InputRightDone ; left and right only work in guimode 1 main screen
+	bne MainScrnInputRightDone
 	
 	inc cursorX
 	lda cursorX
-	and #$0f
+	and #$0f       ; cursor position modulo 16, cannot exceed 15
 	sta cursorX
-InputRightDone:
-
-InputLeft:
+	
+MainScrnInputRightDone:
+MainScrnInputLeft:
 	lda buttons1
 	and #$02
 	cmp #$02
-	bne InputLeftDone
-	
-	lda guiMode
-	cmp #$01
-	bne InputLeftDone ; left and right only work in guimode 1 main screen
+	bne MainScrnInputLeftDone
 	
 	dec cursorX
 	lda cursorX
-	and #$0f
+	and #$0f     ; cursor position modulo 16, cannot exceed 15
 	sta cursorX
-InputLeftDone:
-
-InputUp:
+MainScrnInputLeftDone:
+MainScrnInputDown:
+	lda buttons1
+	and #$04
+	cmp #$04
+	bne MainScrnInputDownDone
+	
+	inc cursorY
+	lda cursorY
+	cmp #$0c               
+	bcc MainScrnInputDownDone  ; if greater than or equal to 0c (went too low) then replace with 00
+	lda #$00
+	sta cursorY
+	
+MainScrnInputDownDone:
+MainScrnInputUp:
 	lda buttons1
 	and #$08
 	cmp #$08
-	bne InputUpDone
+	bne MainScrnInputUpDone
+
+	dec cursorY
+	lda cursorY
+	cmp #$0c        ; if greater than or equal to 0c (too high, underflowed to FF presumably) then replace with 0b
+	bcc MainScrnInputUpDone
+	lda #$0b
+	sta cursorY
+MainScrnInputUpDone:
+
+	jmp InputHandlerDone
 	
-	lda guiMode
-	cmp #$01
-	beq InputUpMainScreen
-	jmp InputUpMenuScreen
+DpadMenuScreen:
+MenuScrnInputUp:
+	lda buttons1
+	and #$08
+	cmp #$08
+	bne MenuScrnInputUpDone
 	
-InputUpMenuScreen:
+	lda prevButtons1
+	and #$08
+	cmp #$08
+	beq MenuScrnInputUpDone
+	
 	dec menuCursorPos ; cursor pos--; if its greater than or equal to the amt of items then set it to menuSize-1 
 	lda menuCursorPos
 	cmp menuSize
-	bcc InputUpDone
+	bcc MenuScrnInputUpDone
 	lda menuSize
 	sec
 	sbc #$01
 	sta menuCursorPos
 	
-	jmp InputUpDone	
+	jmp MenuScrnInputUpDone
 	
-InputUpMainScreen:
-	dec cursorY
-	lda cursorY
-	cmp #$0c
-	bcc InputUpDone
-	lda #$0b
-	sta cursorY
-InputUpDone
-
-InputDown:
+MenuScrnInputUpDone:
+MenuScrnInputDown:
 	lda buttons1
 	and #$04
 	cmp #$04
-	bne InputDownDone
-	
-	lda guiMode
-	cmp #$01
-	beq InputDownMainScreen
-	jmp InputDownMenuScreen
+	bne MenuScrnInputDownDone	
 
-InputDownMenuScreen:
+	lda prevButtons1
+	and #$04
+	cmp #$04
+	beq MenuScrnInputDownDone
+
 	inc menuCursorPos ; cursor pos++; if its greater than or equal to the amt of items then set it to 0 
 	lda menuCursorPos
 	cmp menuSize
-	bcc InputDownDone
+	bcc MenuScrnInputDownDone
 	lda #$00
 	sta menuCursorPos
-	jmp InputDownDone
+	
+	jmp MenuScrnInputDownDone
 
-InputDownMainScreen:
-	inc cursorY
-	lda cursorY
-	cmp #$0c
-	bcc InputDownDone
-	lda #$00
-	sta cursorY
-InputDownDone:
+MenuScrnInputDownDone:
+	jmp InputHandlerDone
 
 InputHandlerDone:
 	rts
