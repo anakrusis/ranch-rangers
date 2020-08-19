@@ -1,7 +1,8 @@
 # ranch-rangers
-This is a really small (NROM 128 is 24KiB) Famicom/NES demo (not quite a game yet) featuring two feuding farmers and their frequent fights! They pit all the farm animals against each other in feud after feud. Whose side are you on?
+This is a very small (NROM 128 = 24KiB total) Famicom/NES demo (not quite a game yet) featuring two feuding farmers and their frequent fights! They pit all the farm animals against each other in feud after feud. Whose side are you on?
 
-![image](https://i.imgur.com/Vi6vSE8.png)
+![image](https://i.imgur.com/zmGvfgm.png)
 
-Uses the Famitone 4.1 engine by shiru and nesdoug, check it out here: https://github.com/nesdoug/famitone4.1
-Inspiration and code ideas from this very helpful resource site, where noted: http://wiki.nesdev.com/w/index.php/Nesdev_Wiki
+May morph into some sort of lighthearted turn-based strategy game. "Turn-based" already complete, "game" part not so much. :) The idea was to make something which is netplayable over an emulator that supports multiplayer like [Mesen](https://www.mesen.ca/) or [Nestopia](http://nestopia.sourceforge.net/). The turn-based nature lets it be fully playable with lag or ping disparities.
+
+Uses the [Famitone 4.1 audio library](https://github.com/nesdoug/famitone4.1) by shiru and nesdoug. Inspiration and code ideas from the [nesdev wiki!](http://wiki.nesdev.com/w/index.php/Nesdev_Wiki)
