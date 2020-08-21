@@ -708,8 +708,12 @@ drawMapChunkDone:
 drawCursor:
 	lda guiMode
 	cmp #$01
-	bne hideMapCursor
+	beq drawMapCursor
+	cmp #$09
+	beq drawMapCursor
+	jmp hideMapCursor
 
+drawMapCursor:
 	lda cursorX ; set cursor x position on screen (will be made better soon (read: without oam hardcoding))
 	asl a       ; multiplied by 16 (coarse)
 	asl a
@@ -842,5 +846,45 @@ StringTest:
     sta stringPtr
     lda #HIGH(text_EngineTitle)
     sta stringPtr+1
+	
+updateStringBuffer:
+	ldx #$00
+clearStringBufferLoop:
+	lda #$28
+	sta stringBuffer, x
+	
+	inx
+	cpx #$20
+	bne clearStringBufferLoop
+
+	lda turn
+	cmp #$00
+	beq loadPointerPlayer1Name
+	jmp loadPointerPlayer2Name
+	
+loadPointerPlayer1Name:
+	lda #LOW(text_Player1Turn+2)
+	sta param1
+	lda #HIGH(text_Player1Turn+2)
+	sta param1+1
+	
+	jmp bufferPlayerName
+	
+loadPointerPlayer2Name:
+	lda #LOW(text_Player2Turn+2)
+	sta param1
+	lda #HIGH(text_Player2Turn+2)
+	sta param1+1
+	
+bufferPlayerName:
+	ldy #$00
+bufferPlayerNameLoop:
+	lda [param1], y
+
+	sta stringBuffer, y
+	
+	iny
+	cpy #$08
+	bne bufferPlayerNameLoop
 	
 	rts

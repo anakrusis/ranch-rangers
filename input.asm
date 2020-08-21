@@ -17,6 +17,8 @@ InputB:
 	
 InputBGuimodeCheck:
 	lda guiMode
+	cmp #$01
+	beq InputBTurnChangeScreen ; does nothing
 	cmp #$03
 	beq InputBUnitScreen
 	cmp #$07
@@ -28,6 +30,11 @@ InputBGuimodeCheck:
 	lda #$01
 	sta guiMode
 	jsr closeCurrentTextBox
+	
+	lda #$01
+	ldx #$00
+	jsr FamiToneSfxPlay
+	
 	jmp InputBDone
 
 	; Unit screen leads back to build screen
@@ -76,6 +83,10 @@ InputAGuimodeCheck:
 	beq InputAUnitScreen
 	cmp #$04
 	beq InputAFarmerScreen
+	cmp #$05
+	beq InputAChickenScreen
+	cmp #$09
+	beq InputAMoveScreen
 	
 	jmp InputADone
 	
@@ -84,6 +95,10 @@ InputAMainScreen:
 	jmp InputADone
 	
 InputAPauseScreen:
+	jmp InputADone
+	
+InputAMoveScreen:
+	jsr moveSelectedUnitToCursorPos
 	jmp InputADone
 	
 InputABuildScreen:
@@ -95,17 +110,25 @@ InputABuildScreen:
 	beq UnitMenu
 	
 InputAUnitScreen:
-	lda menuCursorPos
-	cmp #$00
-	beq PlaceChicken
-	cmp #$01
-	beq PlaceCow
+	jsr AButtonUnitScreenHandler
 	jmp InputADone
 	
 InputAFarmerScreen:
 	lda #$09
 	sta guiMode
 	jsr closeCurrentTextBox
+	jmp InputADone
+	
+InputAChickenScreen:
+	lda menuCursorPos
+	cmp #$00
+	beq MoveChicken
+	jmp InputADone
+
+MoveChicken:
+	lda #$09
+	sta guiMode
+	jsr closeCurrentTextBox	
 	jmp InputADone
 
 PlaceFarm:
@@ -142,42 +165,6 @@ UnitMenu:
 	lda #$03
 	sta guiMode
 	jsr openTextBox
-	jmp InputADone
-	
-PlaceChicken:
-	lda cursorX
-	sta param4
-	lda cursorY
-	sta param5
-	lda #$01
-	sta param6
-	lda turn
-	sta param7
-	jsr placeUnit
-	
-	lda #$02
-	sta guiMode
-	jsr closeCurrentTextBox
-	jsr endTurn
-	
-	jmp InputADone
-	
-PlaceCow:
-	lda cursorX
-	sta param4
-	lda cursorY
-	sta param5
-	lda #$02
-	sta param6
-	lda turn
-	sta param7
-	jsr placeUnit
-	
-	lda #$02
-	sta guiMode
-	jsr closeCurrentTextBox
-	jsr endTurn
-	
 	jmp InputADone
 	
 InputADone:
@@ -363,35 +350,7 @@ ABtnScanPiecesLoop:
 	cmp cursorY
 	bne subtractBeforeTail
 	
-AButtonMainScreenHasUnit:
-
-	tya ; adding 8 more on to iterator to check piece types (offset of 16 bytes)
-	clc
-	adc #$08
-	tay
-
-	lda [param1], y
-	cmp #$00
-	beq openFarmerWindow
-	cmp #$01
-	beq openChickenWindow
-	cmp #$02
-	beq openCowWindow
-	
-openFarmerWindow:
-	lda #$04
-	sta guiMode
-	jsr openTextBox
-	jmp AButtonMainScreenDone
-	
-openChickenWindow:
-	lda #$05
-	sta guiMode
-	jsr openTextBox
-	jmp AButtonMainScreenDone
-	
-openCowWindow:
-	jmp AButtonMainScreenDone
+	jmp AButtonMainScreenHasUnit
 	
 subtractBeforeTail:
 	tya ; subtracting the old 8 on from before so that we have the original iterator value
@@ -430,7 +389,7 @@ ABtnScanP1PiecesLoop:
 	lda p1PiecesY, y
 	cmp cursorY
 	bne ABtnScanP1PiecesLoopTail	
-	jmp AButtonMainScreenDone
+	jmp AButtonMainScreenInvalidInput
 ABtnScanP1PiecesLoopTail:
 	iny
 	cpy p1UnitCount
@@ -445,7 +404,7 @@ ABtnScanP2PiecesLoop:
 	lda p2PiecesY, y
 	cmp cursorY
 	bne ABtnScanP2PiecesLoopTail
-	jmp AButtonMainScreenDone
+	jmp AButtonMainScreenInvalidInput
 ABtnScanP2PiecesLoopTail:
 	iny
 	cpy p2UnitCount
@@ -464,11 +423,106 @@ AButtonMainScreenNoUnit:
 	tax
 	lda MapData, x
 	cmp #$02
-	bne AButtonMainScreenDone
+	bne AButtonMainScreenInvalidInput
 
 	lda #$02
 	sta guiMode
 	jsr openTextBox
 	
+	lda #$00
+	ldx #$00
+	jsr FamiToneSfxPlay
+	
+	jmp AButtonMainScreenDone
+	
+AButtonMainScreenInvalidInput:
+	lda #$02
+	ldx #$00
+	jsr FamiToneSfxPlay
+	
 AButtonMainScreenDone:
+	rts
+	
+AButtonMainScreenHasUnit:
+
+	tya ; subtracting 8 to get the original index of the unit
+	sec
+	sbc #$08
+	sta unitSelected
+
+	tya ; adding 8 more on to iterator to check piece types (offset of 16 bytes)
+	clc
+	adc #$08
+	tay
+
+	lda [param1], y
+	cmp #$00
+	beq openFarmerWindow
+	cmp #$01
+	beq openChickenWindow
+	cmp #$02
+	beq openCowWindow
+	
+openFarmerWindow:
+	lda #$04
+	sta guiMode
+	jsr openTextBox
+	jmp AButtonMainScreenDone
+	
+openChickenWindow:
+	lda #$05
+	sta guiMode
+	jsr openTextBox
+	jmp AButtonMainScreenDone
+	
+openCowWindow:
+	jmp AButtonMainScreenDone
+	
+	
+	
+AButtonUnitScreenHandler:
+	lda menuCursorPos
+	cmp #$00
+	beq PlaceChicken
+	cmp #$01
+	beq PlaceCow
+	jmp AButtonUnitScreenHandlerDone
+	
+PlaceChicken:
+	lda cursorX
+	sta param4
+	lda cursorY
+	sta param5
+	lda #$01
+	sta param6
+	lda turn
+	sta param7
+	jsr placeUnit
+	
+	lda #$02
+	sta guiMode
+	jsr closeCurrentTextBox
+	jsr endTurn
+	
+	jmp AButtonUnitScreenHandlerDone
+	
+PlaceCow:
+	lda cursorX
+	sta param4
+	lda cursorY
+	sta param5
+	lda #$02
+	sta param6
+	lda turn
+	sta param7
+	jsr placeUnit
+	
+	lda #$02
+	sta guiMode
+	jsr closeCurrentTextBox
+	jsr endTurn
+	
+	jmp AButtonUnitScreenHandlerDone	
+	
+AButtonUnitScreenHandlerDone:
 	rts

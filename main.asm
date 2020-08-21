@@ -39,6 +39,8 @@ teste .rs 2 ; my trusty logger. Now it's a big boy and it can log pointers too.
 cursorX .rs 1
 cursorY .rs 1
 
+unitSelected .rs 1 ; 
+
 buttons1 .rs 1
 buttons2 .rs 1
 prevButtons1 .rs 1
@@ -327,6 +329,10 @@ initGameState:
 	ldy #HIGH(song_music_data)
 	jsr FamiToneInit
 	
+	ldx #LOW(sounds)
+	ldy #HIGH(sounds)
+	jsr FamiToneSfxInit
+	
 	lda #$00
 	jsr FamiToneMusicPlay
 	
@@ -530,6 +536,79 @@ UnitLoaded:
 
 	rts
 	
+moveSelectedUnitToCursorPos:
+	lda cursorY ; ensures the build menu only opens on grass tiles
+	asl a
+	asl a
+	asl a
+	asl a
+	clc
+	adc cursorX
+	tax
+	lda MapData, x
+	cmp #$02
+	bne moveUnitInvalidInput
+
+	ldy unitSelected
+
+	lda turn
+	cmp #$00
+	beq MoveP1Unit
+	jmp MoveP2Unit
+	
+MoveP1Unit:
+	lda p1PiecesX, y ; old unit position before moving, already in place for drawMapChunk
+	sta param4
+	lda p1PiecesY, y
+	clc
+	adc #MAP_DRAW_Y
+	sta param5
+
+	lda cursorX     ; updating unit position
+	sta p1PiecesX, y
+	lda cursorY
+	sta p1PiecesY, y
+	
+	jmp moveUnitDrawUpdate
+	
+MoveP2Unit:
+	lda p2PiecesX, y ; old unit position before moving, already in place for drawMapChunk
+	sta param4
+	lda p2PiecesY, y
+	clc
+	adc #MAP_DRAW_Y
+	sta param5
+
+	lda cursorX
+	sta p2PiecesX, y
+	lda cursorY
+	sta p2PiecesY, y
+	
+moveUnitDrawUpdate:
+	lda #$01        ; drawing box with width and height 1 (single tile update)
+	sta param6      ; at the site of the old unit place
+	sta param7
+	jsr drawMapChunk
+	
+	lda cursorX     ; ditto now at the site of the new unit place
+	sta param4
+	lda cursorY
+	clc
+	adc #MAP_DRAW_Y
+	sta param5
+	jsr drawMapChunk
+	
+	jsr endTurn
+	jmp moveUnitDone
+	
+moveUnitInvalidInput:
+	lda #$02
+	ldx #$00
+	jsr FamiToneSfxPlay
+	
+moveUnitDone:
+	rts
+	
 	.include "draw.asm"
 	.include "input.asm"
 	
@@ -611,7 +690,7 @@ text_TheLicc:
 	.db $1d, $31, $2e, $24, $15, $32, $2c, $2c, $ff ; "THE LICC"
 	
 text_EngineTitle:	
-	.db $1b, $1b, $28, $08, $27, $01, $09, $27, $02, $00, $02, $00, $ff ; farm 8/19/2020
+	.db $1b, $1b, $28, $08, $27, $02, $01, $27, $02, $00, $02, $00, $ff ; farm 8/21/2020
 	
 text_Icle:
 	.db $12, $0c, $15, $0e, $ff ; icle
@@ -632,7 +711,7 @@ text_FarmerMenu:
 	.db $0f, $0a, $1b, $16, $0e, $1b, $fe, $16, $18, $1f, $0e, $ff
 	
 text_ChickenMenu:
-	.db $0c, $11, $12, $0c, $14, $0e, $17, $fe, $0a, $1d, $1d, $0a, $0c, $14, $fe, $16, $18, $1f, $0e, $fe, $1b, $0e, $16, $18, $1f, $0e, $ff
+	.db $0c, $11, $12, $0c, $14, $0e, $17, $fe, $16, $18, $1f, $0e, $fe, $0a, $1d, $1d, $0a, $0c, $14, $fe, $1b, $0e, $16, $18, $1f, $0e, $ff
 	
 text_Spring:
 	.db $1c, $19, $1b, $12, $17, $10, $ff
@@ -676,6 +755,7 @@ TheLicc:
 	.db $24, $00, $02, $5f
 	
 	.include "song.asm"
+	.include "sfx.asm"
 	.include "famitone4.asm" ; Sound engine
 	
 ;---- vectors
