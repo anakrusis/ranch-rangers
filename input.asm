@@ -467,12 +467,22 @@ openFarmerWindow:
 	lda #$04
 	sta guiMode
 	jsr openTextBox
+	
+	lda #$00
+	ldx #$00
+	jsr FamiToneSfxPlay
+	
 	jmp AButtonMainScreenDone
 	
 openChickenWindow:
 	lda #$05
 	sta guiMode
 	jsr openTextBox
+	
+	lda #$00
+	ldx #$00
+	jsr FamiToneSfxPlay
+	
 	jmp AButtonMainScreenDone
 	
 openCowWindow:

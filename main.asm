@@ -48,6 +48,7 @@ prevButtons2 .rs 1
 
 	.rsset $0100 ; Try not to add too much, or else you might risk hitting the stack
 dpadInputTimer .rs 1
+hotbarTextNeedsRefresh .rs 1
 
 	.rsset $0400 ; Hey 400 page is full, dont add anything more here
 MapData .rs 192 ; the whole mapa xD
@@ -63,8 +64,15 @@ p2PiecesType .rs 8
 	.rsset $0500
 p1UnitCount .rs 1
 p2UnitCount .rs 1
-p1Gold .rs 1
-p2Gold .rs 1
+p1Gold .rs 2
+p2Gold .rs 2
+p1Kills .rs 1
+p2Kills .rs 1
+
+Hex0 .rs 1
+DecOnes .rs 1
+DecTens .rs 1
+DecHundreds .rs 1
 
 	.rsset $0600
 turnAnimTimer .rs 1
@@ -84,7 +92,7 @@ JOYPAD2 = $4017
 MAP_DRAW_Y = $03
 MAX_METATILE_CHANGES = $03 ; per frame, 12 tiles per frame
 
-SEASONS_LENGTH_IN_TURNS = $05
+SEASONS_LENGTH_IN_TURNS = $03
 
 ;----- first 8k bank of PRG-ROM    
     .bank 0
@@ -92,6 +100,26 @@ SEASONS_LENGTH_IN_TURNS = $05
     
 irq:
 nmi:
+
+RefreshHotbarText:
+	lda hotbarTextNeedsRefresh
+	cmp #$01
+	bne TileBufferHandler
+	
+	lda #$20
+	sta $2006
+	lda #$83
+	sta $2006
+	ldx #$00
+RefreshHotbarTextLoop:
+	lda stringBuffer, x
+	sta $2007
+	inx
+	cpx #$1a
+	bne RefreshHotbarTextLoop
+	
+	lda #$00
+	sta hotbarTextNeedsRefresh
 	
 TileBufferHandler:
 
@@ -129,6 +157,13 @@ TileBufferLoop:
 	cmp #$10 ; the bottom right corner tile (last to be added to the buffer for text boxes) triggers the text write)
 	bne NoTextDraw
 	jsr drawString
+	
+	lda strPPUAddress + 1
+	cmp #$43
+	bne NoTextDraw
+	
+	lda #$01
+	sta hotbarTextNeedsRefresh
 
 NoTextDraw:
 	inx
@@ -147,7 +182,6 @@ TileBufferResetPointer:
 	sta tileBufferIndex
 	
 TileBufferHandlerDone:
-	
 	jsr drawCursor
 
 DrawDone:
@@ -673,13 +707,16 @@ CursorSpriteData:
 	.db $00, $80, %01000011, $08  
 	.db $08, $80, %10000011, $00 
 	.db $08, $80, %11000011, $08 
-	
-springPalette:
-	.db $2a, $30, $11, $38, $2a, $17, $0a, $1a, $2a, $05, $27, $30, $2a, $03, $24, $30
-summerPalette:
+
+dawnPalette:
 	.db $29, $30, $11, $38, $29, $17, $08, $18, $29, $05, $27, $30, $29, $03, $24, $30
-fallPalette:
-	.db $28, $30, $11, $38, $28, $16, $07, $17, $28, $05, $27, $30, $28, $03, $24, $30
+dayPalette:
+	.db $2a, $30, $11, $38, $2a, $17, $0a, $1a, $2a, $05, $27, $30, $2a, $03, $24, $30
+duskPalette:
+	.db $28, $30, $0c, $38, $28, $16, $07, $17, $28, $05, $27, $30, $28, $03, $24, $30
+nightPalette:
+	.db $12, $30, $0f, $38, $12, $17, $0f, $02, $12, $05, $27, $30, $12, $03, $24, $30
+	
 winterPalette:
 	.db $3c, $30, $11, $38, $3c, $15, $0a, $2c, $3c, $05, $27, $30, $3c, $03, $24, $30
 	
@@ -757,6 +794,8 @@ TheLicc:
 	.include "song.asm"
 	.include "sfx.asm"
 	.include "famitone4.asm" ; Sound engine
+	
+	.include "bcd.asm" ; bcd converter
 	
 ;---- vectors
     .org $FFFA     ;first of the three vectors starts here

@@ -24,7 +24,7 @@ SpritePaletteLoop:          ; sprites first
 	
 	ldx #$00
 BGPaletteLoop:              ; then the background palettes
-	lda springPalette, x
+	lda dawnPalette, x
 	sta $2007
 	inx
 	cpx #$10
@@ -115,7 +115,7 @@ changeSeasonPalette:
 	
 	ldx #$00
 seasonPaletteLoop:
-	lda springPalette, y
+	lda dawnPalette, y
 	sta $2007
 	inx
 	iny
@@ -886,5 +886,31 @@ bufferPlayerNameLoop:
 	iny
 	cpy #$08
 	bne bufferPlayerNameLoop
+	
+bufferGoldText:
+	lda turn
+	cmp #$00
+	beq loadPlayer1Gold
+	jmp loadPlayer2Gold
+
+loadPlayer1Gold:
+	lda p1Gold
+	jmp bcdGoldDisplay
+
+loadPlayer2Gold:
+	lda p2Gold
+	
+bcdGoldDisplay:
+	sta Hex0
+	jsr HexToDecimal.8
+	
+	lda DecHundreds
+	sta stringBuffer+12
+	lda DecTens
+	sta stringBuffer+13
+	lda DecOnes
+	sta stringBuffer+14
+	lda #$10
+	sta stringBuffer+15 ; "g"
 	
 	rts
