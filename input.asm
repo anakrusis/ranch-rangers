@@ -407,6 +407,14 @@ openChickenWindow:
 	jmp AButtonMainScreenDone
 	
 openCowWindow:
+	lda #$06
+	sta guiMode
+	jsr openTextBox
+	
+	lda #$00
+	ldx #$00
+	jsr FamiToneSfxPlay	
+	
 	jmp AButtonMainScreenDone
 	
 	

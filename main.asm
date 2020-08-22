@@ -200,9 +200,9 @@ TileBufferHandlerDone:
 	sta seasonPaletteChangeFlag
 	
 DrawDone:
-
-	lda #%10010000   ; enable NMI, sprites from Pattern Table 0, background from Pattern Table 1
+	lda #%00010000   ; turning off NMI while non-drawing stuff happens
 	sta $2000
+
 	lda #%00011110   ; enable sprites, enable background, no clipping on left side
 	sta $2001
 	lda #$00  ; no scrolling
@@ -283,6 +283,9 @@ TurnScreenTimerDone:
 	
 	jsr FamiToneUpdate
 	inc globalTick
+	
+	lda #%10010000   ; re enabling NMI now that game logic stuff is finished
+	sta $2000
 	
     rti
 
@@ -637,6 +640,9 @@ text_FarmerMenu:
 text_ChickenMenu:
 	.db $0c, $11, $12, $0c, $14, $0e, $17, $fe, $16, $18, $1f, $0e, $fe, $0a, $1d, $1d, $0a, $0c, $14, $fe, $1b, $0e, $16, $18, $1f, $0e, $ff
 	
+text_CowMenu:
+	.db $0c, $18, $20, $fe, $0c, $11, $0a, $1b, $10, $0e, $fe, $1b, $0e, $16, $18, $1f, $0e, $ff
+	
 text_Spring:
 	.db $1c, $19, $1b, $12, $17, $10, $ff
 	
@@ -650,21 +656,21 @@ text_Winter:
 	.db $20, $12, $17, $1d, $0e, $1b, $ff
 	
 GuiX:
-	.db $01, $01, $05, $0a, $05, $05, $01, $03, $03
+	.db $01, $01, $05, $0a, $05, $05, $05, $03, $03
 GuiY:
-	.db $01, $01, $06, $06, $06, $06, $01, $06, $06
+	.db $01, $01, $06, $06, $06, $06, $06, $06, $06
 GuiWidths:
-	.db $01, $01, $05, $05, $05, $05, $01, $0a, $0a
+	.db $01, $01, $05, $05, $05, $05, $05, $0a, $0a
 GuiHeights:
-	.db $01, $01, $03, $05, $02, $04, $01, $02, $02
+	.db $01, $01, $03, $05, $02, $04, $03, $02, $02
 GuiMenuSizes:
 	.db $00, $00, $02, $03, $01, $03, $01, $00, $00
 	
 GuiPointerLow:
-	.db $00, LOW(text_EngineTitle), LOW(text_BuildMenu), LOW(text_UnitMenu), LOW(text_FarmerMenu), LOW(text_ChickenMenu), $00, LOW(text_Player1Turn), LOW(text_Player2Turn)
+	.db $00, LOW(text_EngineTitle), LOW(text_BuildMenu), LOW(text_UnitMenu), LOW(text_FarmerMenu), LOW(text_ChickenMenu), LOW(text_CowMenu), LOW(text_Player1Turn), LOW(text_Player2Turn)
 
 GuiPointerHigh:
-	.db $00, HIGH(text_EngineTitle), HIGH(text_BuildMenu), HIGH(text_UnitMenu), HIGH(text_FarmerMenu), HIGH(text_ChickenMenu), $00, HIGH(text_Player1Turn), HIGH(text_Player2Turn)
+	.db $00, HIGH(text_EngineTitle), HIGH(text_BuildMenu), HIGH(text_UnitMenu), HIGH(text_FarmerMenu), HIGH(text_ChickenMenu), HIGH(text_CowMenu), HIGH(text_Player1Turn), HIGH(text_Player2Turn)
 	
 Song:
 	.db $7f, $20, $02, $25, $0c ; fantasia in funk
