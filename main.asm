@@ -200,14 +200,14 @@ TileBufferHandlerDone:
 	sta seasonPaletteChangeFlag
 	
 DrawDone:
-	lda #%00010000   ; turning off NMI while non-drawing stuff happens
-	sta $2000
-
 	lda #%00011110   ; enable sprites, enable background, no clipping on left side
 	sta $2001
 	lda #$00  ; no scrolling
 	sta $2005
 	sta $2005
+	
+	lda #%00010000   ; turning off NMI while non-drawing stuff happens
+	sta $2000
 	
 	lda #$00
 	sta $2003  
@@ -664,7 +664,7 @@ GuiWidths:
 GuiHeights:
 	.db $01, $01, $03, $05, $02, $04, $03, $02, $02
 GuiMenuSizes:
-	.db $00, $00, $02, $03, $01, $03, $01, $00, $00
+	.db $00, $00, $02, $03, $01, $03, $02, $00, $00
 	
 GuiPointerLow:
 	.db $00, LOW(text_EngineTitle), LOW(text_BuildMenu), LOW(text_UnitMenu), LOW(text_FarmerMenu), LOW(text_ChickenMenu), LOW(text_CowMenu), LOW(text_Player1Turn), LOW(text_Player2Turn)

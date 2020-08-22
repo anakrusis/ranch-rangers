@@ -137,44 +137,31 @@ drawTile:
 	
 	jsr setAttributes
 
-	lda param2
-	asl a ; x multiplied by 0x02
-	sta param2
-	
-	lda #$00
+	lda #$20 ; initial address of 2000 and nametable 0, the only nametable of this game >:)
 	sta tilePPUAddress
-	lda param3
-	sta tilePPUAddress + 1
 	
-	asl tilePPUAddress + 1 ; y multiplied by 0x40 (16 bit left shift six times)
-	rol tilePPUAddress
-	asl tilePPUAddress + 1
-	rol tilePPUAddress 
-	asl tilePPUAddress + 1 
-	rol tilePPUAddress
-	asl tilePPUAddress + 1
-	rol tilePPUAddress 
-	asl tilePPUAddress + 1
-	rol tilePPUAddress 
-	asl tilePPUAddress + 1
-	rol tilePPUAddress
-	
-	clc ; x and y are added together
-	lda param2
-	adc tilePPUAddress + 1
-	sta tilePPUAddress + 1
-	bcc drawTileAddDone
-	inc tilePPUAddress
-drawTileAddDone:
-	
-	clc	; the sum of x and y are added to the value $20c0 which is the top part of the map screen
-	lda tilePPUAddress + 1
-	adc #$00
-	sta tilePPUAddress + 1	
-	
-	lda tilePPUAddress
-	adc #$20			
+	lda param3 ; y*2
+	asl a
+	lsr a      ; shifted right 3 times for just the high 2 bits
+	lsr a
+	lsr a
+	ora tilePPUAddress
 	sta tilePPUAddress
+	
+	lda param3 ; y*2 again
+	asl a 
+	
+	asl a ; this time shifted left 5 times for the low 3 bits on top 
+	asl a
+	asl a
+	asl a
+	asl a
+	sta tilePPUAddress+1
+	
+	lda param2 ; x*2
+	asl a
+	ora tilePPUAddress+1
+	sta tilePPUAddress+1
 	
 drawTileTop:
 	lda $2002
