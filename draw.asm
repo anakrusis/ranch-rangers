@@ -705,6 +705,22 @@ drawMapRowDone:
 drawMapChunkDone:	
 	rts
 	
+drawSprites:
+allSpritesOffscreen:
+	ldx #$00
+allSpritesOffscreenLoop:
+	txa
+	asl a
+	asl a
+	tay
+
+	lda #$fe
+	sta $0200, y ; with no offset it just places the y variable offscreen, this is fine enough
+	
+	inx
+	cpx #$40
+	bne allSpritesOffscreenLoop
+	
 drawCursor:
 	lda guiMode
 	cmp #$01
@@ -802,6 +818,65 @@ drawMenuCursor:
 	sta $0201
 	
 drawCursorDone:
+
+	lda guiMode
+	cmp #$09
+	beq drawValidMoveIndicators
+	jmp drawValidMoveIndicatorsDone
+
+drawValidMoveIndicators:
+	ldx #$00
+validMoveIndicatorLoop:
+
+	; generating the pointer into OAM and putting it in Y
+	txa
+	clc
+	adc #$04 ; adding 4 onto the index so we dont hurt the cursor sprite (4 sprites rly)
+	asl a
+	asl a ; times 4 cus oam entrys are 4 long
+	tay
+	
+drawIndicator:
+	lda validMovesX, x ; position*16
+	asl a
+	asl a
+	asl a
+	asl a
+	clc
+	adc #$04      ; so it shows up in the middle of the tile
+	sta $0203, y
+	
+	lda validMovesY, x
+	clc
+	adc #MAP_DRAW_Y
+	asl a
+	asl a
+	asl a
+	asl a
+	clc
+	adc #$04 ; ditto
+	sta $0200, y
+	
+	sty param1
+	
+	lda globalTick
+	lsr a
+	lsr a
+	lsr a
+	and #$03
+	tay
+	lda IndicatorSpriteAnimation, y
+	
+	ldy param1
+	sta $0201, y
+
+validMoveIndicatorLoopTail:	
+	inx
+	cpx validMovesCount
+	bne validMoveIndicatorLoop
+
+drawValidMoveIndicatorsDone:
+drawSpritesDone:
 	rts
 	
 ; You know how it goes, param1 type, param2 Xposition, param3 Yposition

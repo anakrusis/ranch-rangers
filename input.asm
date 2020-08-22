@@ -114,6 +114,7 @@ InputAUnitScreen:
 	jmp InputADone
 	
 InputAFarmerScreen:
+MoveFarmer:
 	lda #$09
 	sta guiMode
 	jsr closeCurrentTextBox
@@ -308,108 +309,22 @@ InputHandlerDone:
 	
 AButtonMainScreenHandler:
 
-	; firstly checks if a unit of YOURS occupies the space
-
-ABtnYourUnitCheck:
-	lda turn
-	cmp #$00
-	beq ABtnLoadP1PiecesData
-	jmp ABtnLoadP2PiecesData
-	
-	; loading pieces data: param1 and param2 store the pointer to the start of the pieces (X positions come first)
-	
-ABtnLoadP1PiecesData:
-	lda #LOW(p1PiecesX)
+	lda cursorX
 	sta param1
-	lda #HIGH(p1PiecesX)
+	lda cursorY
 	sta param2
-	jmp ABtnScanPieces
-
-ABtnLoadP2PiecesData:
-	lda #LOW(p2PiecesX)
-	sta param1
-	lda #HIGH(p2PiecesX)
-	sta param2
-	jmp ABtnScanPieces
+	; is a unit present on the space?
+	jsr checkUnitOnTile
+	lda param3
+	cmp #$ff
+	beq AButtonMainScreenNoUnit
 	
-ABtnScanPieces:
-
-	ldy #$00
-ABtnScanPiecesLoop:
-	lda [param1], y
-	sty teste
-	cmp cursorX
-	bne ABtnScanPiecesLoopTail
-	
-	tya ; adding 8 on to iterator to check Y values (offset of 8 bytes)
-	clc
-	adc #$08
-	tay
-	
-	lda [param1], y
-	cmp cursorY
-	bne subtractBeforeTail
-	
+	; is it friendly or enemy unit? Can't open up menu on enemy units.
+	lda param4
+	cmp turn
+	bne AButtonMainScreenInvalidInput
 	jmp AButtonMainScreenHasUnit
 	
-subtractBeforeTail:
-	tya ; subtracting the old 8 on from before so that we have the original iterator value
-	sec
-	sbc #$08
-	tay
-
-ABtnScanPiecesLoopTail:
-	iny
-	
-	lda turn
-	cmp #$00
-	beq compareP1Units
-	jmp compareP2Units
-
-compareP1Units:
-	cpy p1UnitCount
-	bne ABtnScanPiecesLoop
-	jmp ABtnAnyUnitCheck
-
-compareP2Units:
-	cpy p2UnitCount
-	bne ABtnScanPiecesLoop
-	
-	
-	; Now checking for any unit! If it's not yours, it must be someone else's. In that case,
-	; you cannot alter the tile where the other player's unit stands. that would be very bad. Skip to the end.
-ABtnAnyUnitCheck:
-	
-	; PLAYER 1 units get checked again...
-	ldy #$00
-ABtnScanP1PiecesLoop:
-	lda p1PiecesX, y
-	cmp cursorX
-	bne ABtnScanP1PiecesLoopTail
-	lda p1PiecesY, y
-	cmp cursorY
-	bne ABtnScanP1PiecesLoopTail	
-	jmp AButtonMainScreenInvalidInput
-ABtnScanP1PiecesLoopTail:
-	iny
-	cpy p1UnitCount
-	bne ABtnScanP1PiecesLoop
-	
-	; PLAYER 2 units get checked also again...
-	ldy #$00
-ABtnScanP2PiecesLoop:
-	lda p2PiecesX, y
-	cmp cursorX
-	bne ABtnScanP2PiecesLoopTail
-	lda p2PiecesY, y
-	cmp cursorY
-	bne ABtnScanP2PiecesLoopTail
-	jmp AButtonMainScreenInvalidInput
-ABtnScanP2PiecesLoopTail:
-	iny
-	cpy p2UnitCount
-	bne ABtnScanP2PiecesLoop
-
 	; if no unit occupies the space, we can treat it like a normal tile which you can place farms or spawn units on...
 
 AButtonMainScreenNoUnit:
@@ -444,24 +359,30 @@ AButtonMainScreenDone:
 	rts
 	
 AButtonMainScreenHasUnit:
+	
+	; the param variables were set earlier from the subroutine checkUnitOnTile
 
-	tya ; subtracting 8 to get the original index of the unit
-	sec
-	sbc #$08
+	lda param3 ; what index is it
 	sta unitSelected
-
-	tya ; adding 8 more on to iterator to check piece types (offset of 16 bytes)
-	clc
-	adc #$08
-	tay
-
-	lda [param1], y
+	lda param5 ; what type is it
+	sta unitSelectedType
+	
+	lda cursorX
+	sta unitSelectedX 
+	lda cursorY
+	sta unitSelectedY
+	
+	jsr calculateValidUnitMoves
+	
+	lda unitSelectedType ; what type unit is it?
 	cmp #$00
 	beq openFarmerWindow
 	cmp #$01
 	beq openChickenWindow
 	cmp #$02
 	beq openCowWindow
+	
+	jmp AButtonMainScreenDone
 	
 openFarmerWindow:
 	lda #$04

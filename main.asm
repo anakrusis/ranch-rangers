@@ -39,7 +39,10 @@ teste .rs 2 ; my trusty logger. Now it's a big boy and it can log pointers too.
 cursorX .rs 1
 cursorY .rs 1
 
-unitSelected .rs 1 ; 
+unitSelected .rs 1 ; index
+unitSelectedX .rs 1 
+unitSelectedY .rs 1
+unitSelectedType .rs 1
 
 buttons1 .rs 1
 buttons2 .rs 1
@@ -49,6 +52,7 @@ prevButtons2 .rs 1
 	.rsset $0100 ; Try not to add too much, or else you might risk hitting the stack
 dpadInputTimer .rs 1
 hotbarTextNeedsRefresh .rs 1
+seasonPaletteChangeFlag .rs 1
 
 	.rsset $0400 ; Hey 400 page is full, dont add anything more here
 MapData .rs 192 ; the whole mapa xD
@@ -73,6 +77,10 @@ Hex0 .rs 1
 DecOnes .rs 1
 DecTens .rs 1
 DecHundreds .rs 1
+
+validMovesCount .rs 1
+validMovesX .rs 32
+validMovesY .rs 32
 
 	.rsset $0600
 turnAnimTimer .rs 1
@@ -182,8 +190,15 @@ TileBufferResetPointer:
 	sta tileBufferIndex
 	
 TileBufferHandlerDone:
-	jsr drawCursor
-
+	
+	lda seasonPaletteChangeFlag
+	cmp #$01
+	bne DrawDone
+	
+	jsr changeSeasonPalette
+	lda #$00
+	sta seasonPaletteChangeFlag
+	
 DrawDone:
 
 	lda #%10010000   ; enable NMI, sprites from Pattern Table 0, background from Pattern Table 1
@@ -198,6 +213,8 @@ DrawDone:
 	sta $2003  
 	lda #$02
 	sta $4014 ; oam dma
+	
+	jsr drawSprites
 	
 	; buttons from the previous frame to be compared for new presses!
 	lda buttons1
@@ -244,7 +261,8 @@ TurnScreenClear:
 	lda #$01
 	sta guiMode
 	
-	jsr changeSeasonPalette
+	lda #$01
+	sta seasonPaletteChangeFlag
 	
 	jsr closeCurrentTextBox
 	jsr updateHotbar
@@ -508,141 +526,7 @@ p2EndTurn:
 	
 	rts
 	
-; X and Y pos: param4 and param5
-; unit type: param6
-; allegiance: param7 $00 = player 1, $01 = player 2
-placeUnit:
-
-	lda param7
-	cmp #$00
-	beq p1UnitLoad
-	jmp p2UnitLoad
-
-p1UnitLoad:
-
-	ldx p1UnitCount
-	
-	lda param4
-	sta p1PiecesX, x
-	
-	lda param5
-	sta p1PiecesY, x
-	
-	lda param6
-	sta p1PiecesType, x
-	
-	inc p1UnitCount
-
-	lda param6
-	clc
-	adc #$04
-	jmp UnitLoaded
-p2UnitLoad:
-
-	ldx p2UnitCount
-	
-	lda param4
-	sta p2PiecesX, x
-	
-	lda param5
-	sta p2PiecesY, x
-	
-	lda param6
-	sta p2PiecesType, x
-	
-	inc p2UnitCount
-
-	lda param6
-	clc 
-	adc #$11
-	
-UnitLoaded:
-	sta param1
-	
-	lda param4 ; transfer x and y coordinates
-	sta param2
-	lda param5
-	clc
-	adc #MAP_DRAW_Y
-	sta param3
-	
-	jsr placeTileInBuffer
-
-	rts
-	
-moveSelectedUnitToCursorPos:
-	lda cursorY ; ensures the build menu only opens on grass tiles
-	asl a
-	asl a
-	asl a
-	asl a
-	clc
-	adc cursorX
-	tax
-	lda MapData, x
-	cmp #$02
-	bne moveUnitInvalidInput
-
-	ldy unitSelected
-
-	lda turn
-	cmp #$00
-	beq MoveP1Unit
-	jmp MoveP2Unit
-	
-MoveP1Unit:
-	lda p1PiecesX, y ; old unit position before moving, already in place for drawMapChunk
-	sta param4
-	lda p1PiecesY, y
-	clc
-	adc #MAP_DRAW_Y
-	sta param5
-
-	lda cursorX     ; updating unit position
-	sta p1PiecesX, y
-	lda cursorY
-	sta p1PiecesY, y
-	
-	jmp moveUnitDrawUpdate
-	
-MoveP2Unit:
-	lda p2PiecesX, y ; old unit position before moving, already in place for drawMapChunk
-	sta param4
-	lda p2PiecesY, y
-	clc
-	adc #MAP_DRAW_Y
-	sta param5
-
-	lda cursorX
-	sta p2PiecesX, y
-	lda cursorY
-	sta p2PiecesY, y
-	
-moveUnitDrawUpdate:
-	lda #$01        ; drawing box with width and height 1 (single tile update)
-	sta param6      ; at the site of the old unit place
-	sta param7
-	jsr drawMapChunk
-	
-	lda cursorX     ; ditto now at the site of the new unit place
-	sta param4
-	lda cursorY
-	clc
-	adc #MAP_DRAW_Y
-	sta param5
-	jsr drawMapChunk
-	
-	jsr endTurn
-	jmp moveUnitDone
-	
-moveUnitInvalidInput:
-	lda #$02
-	ldx #$00
-	jsr FamiToneSfxPlay
-	
-moveUnitDone:
-	rts
-	
+	.include "unit.asm"
 	.include "draw.asm"
 	.include "input.asm"
 	
@@ -707,6 +591,9 @@ CursorSpriteData:
 	.db $00, $80, %01000011, $08  
 	.db $08, $80, %10000011, $00 
 	.db $08, $80, %11000011, $08 
+	
+IndicatorSpriteAnimation:
+	.db $82, $83, $84, $83
 
 dawnPalette:
 	.db $29, $30, $11, $38, $29, $17, $08, $18, $29, $05, $27, $30, $29, $03, $24, $30
@@ -727,7 +614,7 @@ text_TheLicc:
 	.db $1d, $31, $2e, $24, $15, $32, $2c, $2c, $ff ; "THE LICC"
 	
 text_EngineTitle:	
-	.db $1b, $1b, $28, $08, $27, $02, $01, $27, $02, $00, $02, $00, $ff ; farm 8/21/2020
+	.db $1b, $1b, $28, $08, $27, $02, $02, $27, $02, $00, $02, $00, $ff ; farm 8/22/2020
 	
 text_Icle:
 	.db $12, $0c, $15, $0e, $ff ; icle
