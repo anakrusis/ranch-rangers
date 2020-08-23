@@ -98,7 +98,7 @@ JOYPAD1 = $4016
 JOYPAD2 = $4017
 
 MAP_DRAW_Y = $03
-MAX_METATILE_CHANGES = $03 ; per frame, 12 tiles per frame
+MAX_METATILE_CHANGES = $02 ; per frame, 8 tiles per frame
 
 SEASONS_LENGTH_IN_TURNS = $03
 
@@ -532,6 +532,9 @@ p2EndTurn:
 	.include "draw.asm"
 	.include "input.asm"
 	
+UnitHasCombinedAttackMove:
+	.db $01, $00, $01
+	
 ;----- second 8k bank of PRG-ROM    
     .bank 1
     .org $E000
@@ -606,6 +609,11 @@ duskPalette:
 nightPalette:
 	.db $12, $30, $0f, $38, $12, $17, $0f, $02, $12, $05, $27, $30, $12, $03, $24, $30
 	
+duskPalette2:
+	.db $26, $30, $0c, $38, $26, $17, $0f, $16, $26, $05, $27, $30, $26, $03, $24, $30
+duskPalette3:
+	.db $14, $30, $0f, $38, $14, $17, $0f, $04, $14, $05, $27, $30, $14, $03, $24, $30
+	
 winterPalette:
 	.db $3c, $30, $11, $38, $3c, $15, $0a, $2c, $3c, $05, $27, $30, $3c, $03, $24, $30
 	
@@ -616,7 +624,7 @@ text_TheLicc:
 	.db $1d, $31, $2e, $24, $15, $32, $2c, $2c, $ff ; "THE LICC"
 	
 text_EngineTitle:	
-	.db $1b, $1b, $28, $08, $27, $02, $02, $27, $02, $00, $02, $00, $ff ; farm 8/22/2020
+	.db $1b, $1b, $28, $08, $27, $02, $03, $27, $02, $00, $02, $00, $ff ; farm 8/23/2020
 	
 text_Icle:
 	.db $12, $0c, $15, $0e, $ff ; icle
@@ -654,22 +662,25 @@ text_Fall:
 text_Winter:
 	.db $20, $12, $17, $1d, $0e, $1b, $ff
 	
+text_Harvest:
+	.db $11, $0a, $1b, $1f, $0e, $1c, $1d, $ff
+	
 GuiX:
-	.db $01, $01, $05, $0a, $05, $05, $05, $03, $03
+	.db $01, $01, $05, $0a, $05, $05, $05, $03, $03, $01, $01, $01
 GuiY:
-	.db $01, $01, $06, $06, $06, $06, $06, $06, $06
+	.db $01, $01, $06, $06, $06, $06, $06, $06, $06, $01, $01, $01
 GuiWidths:
-	.db $01, $01, $05, $05, $05, $05, $05, $0a, $0a
+	.db $01, $01, $05, $05, $05, $05, $05, $0a, $0a, $01, $01, $01
 GuiHeights:
-	.db $01, $01, $03, $05, $02, $04, $03, $02, $02
+	.db $01, $01, $03, $05, $02, $04, $03, $02, $02, $01, $01, $01
 GuiMenuSizes:
-	.db $00, $00, $02, $03, $01, $03, $02, $00, $00
+	.db $00, $00, $02, $03, $01, $03, $02, $00, $00, $00, $00, $00
 	
 GuiPointerLow:
-	.db $00, LOW(text_EngineTitle), LOW(text_BuildMenu), LOW(text_UnitMenu), LOW(text_FarmerMenu), LOW(text_ChickenMenu), LOW(text_CowMenu), LOW(text_Player1Turn), LOW(text_Player2Turn)
+	.db $00, LOW(text_EngineTitle), LOW(text_BuildMenu), LOW(text_UnitMenu), LOW(text_FarmerMenu), LOW(text_ChickenMenu), LOW(text_CowMenu), LOW(text_Player1Turn), LOW(text_Player2Turn), $00, $00, $00, LOW(text_Harvest)
 
 GuiPointerHigh:
-	.db $00, HIGH(text_EngineTitle), HIGH(text_BuildMenu), HIGH(text_UnitMenu), HIGH(text_FarmerMenu), HIGH(text_ChickenMenu), HIGH(text_CowMenu), HIGH(text_Player1Turn), HIGH(text_Player2Turn)
+	.db $00, HIGH(text_EngineTitle), HIGH(text_BuildMenu), HIGH(text_UnitMenu), HIGH(text_FarmerMenu), HIGH(text_ChickenMenu), HIGH(text_CowMenu), HIGH(text_Player1Turn), HIGH(text_Player2Turn), $00, $00, $00, HIGH(text_Harvest)
 	
 Song:
 	.db $7f, $20, $02, $25, $0c ; fantasia in funk

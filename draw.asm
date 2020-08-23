@@ -704,6 +704,10 @@ allSpritesOffscreenLoop:
 	lda #$fe
 	sta $0200, y ; with no offset it just places the y variable offscreen, this is fine enough
 	
+	lda #%11011111
+	and $0202, y
+	sta $0202, y
+	
 	inx
 	cpx #$40
 	bne allSpritesOffscreenLoop
@@ -713,6 +717,8 @@ drawCursor:
 	cmp #$01
 	beq drawMapCursor
 	cmp #$09
+	beq drawMapCursor
+	cmp #$0a
 	beq drawMapCursor
 	jmp hideMapCursor
 
@@ -808,6 +814,8 @@ drawCursorDone:
 
 	lda guiMode
 	cmp #$09
+	beq checkValidMoveCount
+	cmp #$0a
 	beq checkValidMoveCount
 	jmp drawValidMoveIndicatorsDone
 

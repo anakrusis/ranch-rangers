@@ -162,11 +162,21 @@ moveUnitDone:
 	
 ; no params, takes in unitSelected and makes an array of moves that are possible
 calculateValidUnitMoves:
-	lda unitSelectedX
+	lda unitSelectedY
+	asl a
+	asl a
+	asl a
+	asl a
+	clc
+	adc unitSelectedX
+	
 	sec
 	sbc #$20
 	tax
-	sta param9 ; param9 contains an index two rows above
+	
+	clc
+	adc #$40
+	sta param9 ; param9 contains an index two rows below
 
 	lda #$00
 	sta validMovesCount
@@ -192,10 +202,9 @@ mapCheckUnit:
 	sta param2
 	jsr checkUnitOnTile
 	
-	; is there a unit on this tile?
-	lda param3
-	cmp #$ff
-	bne mapValidCalcLoopTail
+	jsr mapDecideUnitMoveValid
+	cmp #$00
+	beq mapValidCalcLoopTail
 	
 	lda unitSelectedX
 	sta param3
@@ -219,10 +228,55 @@ mapCheckUnit:
 	
 mapValidCalcLoopTail:
 	inx
-	cpx #$b0
+	
+	cpx param9
 	bne mapValidCalcLoop
 	
 	rts
+	
+; input: whatever checkUnitOnTile outputs, and guiMode which is set before
+; output: validity of move in A
+mapDecideUnitMoveValid:
+	; attack mode?
+	lda guiMode
+	cmp #$0a
+	beq AtkModeEval
+	jmp MovModeEval
+	
+AtkModeEval:
+	; is there a unit on this tile?
+	lda param3
+	cmp #$ff
+	beq AtkModeNoUnit
+	
+	; is it friendly or enemy?
+	lda param4
+	cmp turn
+	beq MoveInvalid
+	jmp MoveValid
+	
+AtkModeNoUnit:
+	; no unit? if so, then does the unit have a combined move-attack?
+	ldy unitSelectedType
+	lda UnitHasCombinedAttackMove, y
+	cmp #$01
+	beq MoveValid
+	jmp MoveInvalid
+	
+MoveValid:
+	lda #$01
+	rts
+	
+MoveInvalid:
+	lda #$00
+	rts
+	
+MovModeEval:
+	; is there a unit on this tile?
+	lda param3
+	cmp #$ff
+	beq MoveValid
+	jmp MoveInvalid
 	
 ; param1/2 X and Y position of tile to check
 ; output:

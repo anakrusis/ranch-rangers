@@ -85,8 +85,12 @@ InputAGuimodeCheck:
 	beq InputAFarmerScreen
 	cmp #$05
 	beq InputAChickenScreen
+	cmp #$06
+	beq InputACowScreen
 	cmp #$09
 	beq InputAMoveScreen
+	cmp #$0a
+	beq InputAAttackScreen
 	
 	jmp InputADone
 	
@@ -100,6 +104,10 @@ InputAPauseScreen:
 InputAMoveScreen:
 	jsr moveSelectedUnitToCursorPos
 	jmp InputADone
+
+InputAAttackScreen:
+	jsr moveSelectedUnitToCursorPos
+	jmp InputADone
 	
 InputABuildScreen:
 
@@ -108,6 +116,12 @@ InputABuildScreen:
 	beq PlaceFarm
 	cmp #$00
 	beq UnitMenu
+
+UnitMenu:
+	lda #$03
+	sta guiMode
+	jsr openTextBox
+	jmp InputADone
 	
 InputAUnitScreen:
 	jsr AButtonUnitScreenHandler
@@ -132,6 +146,14 @@ MoveChicken:
 	sta guiMode
 	jsr calculateValidUnitMoves
 	jsr closeCurrentTextBox	
+	jmp InputADone
+	
+InputACowScreen:
+AttackCow:
+	lda #$0a
+	sta guiMode
+	jsr calculateValidUnitMoves
+	jsr closeCurrentTextBox
 	jmp InputADone
 
 PlaceFarm:
@@ -164,18 +186,14 @@ PlaceFarm:
 	
 	jmp InputADone
 	
-UnitMenu:
-	lda #$03
-	sta guiMode
-	jsr openTextBox
-	jmp InputADone
-	
 InputADone:
 DpadCheckGuimode:
 	lda guiMode
 	cmp #$01
 	beq DpadMainScreen
 	cmp #$09
+	beq DpadMainScreen
+	cmp #$0a
 	beq DpadMainScreen
 	jmp DpadMenuScreen
 	

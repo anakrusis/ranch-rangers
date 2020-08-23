@@ -4,11 +4,12 @@
 
 
 song_music_data:
-	.db 2
+	.db 3
 	.dw .instruments
 	.dw .samples-3
 	.dw .song0ch0,.song0ch1,.song0ch2,.song0ch3,.song0ch4,307,256 ; New song
 	.dw .song1ch0,.song1ch1,.song1ch2,.song1ch3,.song1ch4,307,256 ; New song
+	.dw .song2ch0,.song2ch1,.song2ch2,.song2ch3,.song2ch4,307,256 ; New song
 
 .instruments:
 	.db $f0 ;instrument $00
@@ -321,3 +322,47 @@ song_music_data:
 	.db $8f
 	.db $fd
 	.dw .song1ch4loop
+
+
+; New song
+.song2ch0:
+	.db $fb,$0c
+.song2ch0loop:
+.ref110:
+	.db $81,$86,$0d,$81,$1d,$81,$14,$81,$0d,$81,$0f,$81,$1f,$81,$16,$81
+	.db $0f,$81,$0b,$81,$1b,$81,$12,$81,$0b
+	.db $fd
+	.dw .song2ch0loop
+
+; New song
+.song2ch1:
+.song2ch1loop:
+.ref111:
+	.db $86,$06,$81,$14,$81,$1b,$81,$16,$81,$08,$81,$16,$81,$1d,$81,$18
+	.db $81,$04,$81,$12,$81,$19,$81,$14,$81
+	.db $fd
+	.dw .song2ch1loop
+
+; New song
+.song2ch2:
+.song2ch2loop:
+.ref112:
+	.db $af
+	.db $fd
+	.dw .song2ch2loop
+
+; New song
+.song2ch3:
+.song2ch3loop:
+.ref113:
+	.db $af
+	.db $fd
+	.dw .song2ch3loop
+
+; New song
+.song2ch4:
+.song2ch4loop:
+.ref114:
+	.db $af
+	.db $fd
+	.dw .song2ch4loop
