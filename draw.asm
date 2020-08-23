@@ -808,10 +808,17 @@ drawCursorDone:
 
 	lda guiMode
 	cmp #$09
-	beq drawValidMoveIndicators
+	beq checkValidMoveCount
+	jmp drawValidMoveIndicatorsDone
+
+checkValidMoveCount:
+	lda validMovesCount
+	cmp #$00
+	bne drawValidMoveIndicators
 	jmp drawValidMoveIndicatorsDone
 
 drawValidMoveIndicators:
+
 	ldx #$00
 validMoveIndicatorLoop:
 

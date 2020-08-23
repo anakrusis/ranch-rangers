@@ -240,7 +240,6 @@ ReadControllerLoop:
     rol buttons2    ; Carry -> bit 0; bit 7 -> Carry
     bcc ReadControllerLoop
 	
-	
 TurnScreenTimer:
 	; Little timing based code for the turn indicator
 	lda guiMode

@@ -117,6 +117,7 @@ InputAFarmerScreen:
 MoveFarmer:
 	lda #$09
 	sta guiMode
+	jsr calculateValidUnitMoves
 	jsr closeCurrentTextBox
 	jmp InputADone
 	
@@ -129,6 +130,7 @@ InputAChickenScreen:
 MoveChicken:
 	lda #$09
 	sta guiMode
+	jsr calculateValidUnitMoves
 	jsr closeCurrentTextBox	
 	jmp InputADone
 
@@ -371,8 +373,6 @@ AButtonMainScreenHasUnit:
 	sta unitSelectedX 
 	lda cursorY
 	sta unitSelectedY
-	
-	jsr calculateValidUnitMoves
 	
 	lda unitSelectedType ; what type unit is it?
 	cmp #$00

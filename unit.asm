@@ -162,9 +162,14 @@ moveUnitDone:
 	
 ; no params, takes in unitSelected and makes an array of moves that are possible
 calculateValidUnitMoves:
+	lda unitSelectedX
+	sec
+	sbc #$20
+	tax
+	sta param9 ; param9 contains an index two rows above
 
-	ldx #$00
-	stx validMovesCount
+	lda #$00
+	sta validMovesCount
 	
 mapValidCalcLoop:
 
@@ -214,7 +219,7 @@ mapCheckUnit:
 	
 mapValidCalcLoopTail:
 	inx
-	cpx #$c0
+	cpx #$b0
 	bne mapValidCalcLoop
 	
 	rts
