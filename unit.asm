@@ -387,3 +387,106 @@ chebyshevReturnX:
 	sta param5
 	sta teste
 	rts
+
+; index param3 
+; allegiance param4 thats it
+removeUnit:
+	ldy param3
+	
+	lda param4
+	cmp #$00
+	beq removeP1Unit
+	jmp removeP2Unit
+removeP1Unit:
+
+	lda p1PiecesX, y ; preparing for drawMapChunk after unit is removed
+	sta param4
+	lda p1PiecesY, y
+	clc
+	adc #MAP_DRAW_Y
+	sta param5
+	lda #$01
+	sta param6
+	sta param7
+
+	
+removeP1UnitLoop:
+	iny           ; starting with the unit one above
+	cpy #$08
+	beq removeP1UnitDone ; if already at the top index, then no shifting needed (the result would be very bad) so just decrement the unit count
+	
+	lda p1PiecesX, y
+	dey
+	sta p1PiecesX, y ; write x to the unit below
+	iny
+	
+	lda p1PiecesY, y
+	dey
+	sta p1PiecesY, y ; write y to the unit below
+	iny
+	
+	lda p1PiecesType, y
+	dey
+	sta p1PiecesType, y ; write type to the unit below
+	iny
+	
+	cpy p1UnitCount
+	bne removeP1UnitLoop
+
+removeP1UnitDone:
+	dec p1UnitCount
+	jsr drawMapChunk
+	
+	rts
+	
+removeP2Unit:
+
+	lda p2PiecesX, y ; preparing for drawMapChunk after unit is removed
+	sta param4
+	lda p2PiecesY, y
+	clc
+	adc #MAP_DRAW_Y
+	sta param5
+	lda #$01
+	sta param6
+	sta param7
+	
+removeP2UnitLoop:
+	iny           ; starting with the unit one above
+	cpy #$08
+	beq removeP2UnitDone ; if already at the top index, then no shifting needed (the result would be very bad) so just decrement the unit count
+	
+	lda p2PiecesX, y
+	dey
+	sta p2PiecesX, y ; write x to the unit below
+	iny
+	
+	lda p2PiecesY, y
+	dey
+	sta p2PiecesY, y ; write y to the unit below
+	iny
+	
+	lda p2PiecesType, y
+	dey
+	sta p2PiecesType, y ; write type to the unit below
+	iny
+	
+	cpy p2UnitCount
+	bne removeP2UnitLoop
+
+removeP2UnitDone:
+	dec p2UnitCount
+	jsr drawMapChunk
+	
+	rts
+	
+; only used when voluntarily deleting a unit, not when in battle.
+removeUnitAnimationSfxInit:
+
+	; todo init some animation timer here lol
+
+	lda #$05
+	ldx #$00
+	jsr FamiToneSfxPlay
+	
+	rts

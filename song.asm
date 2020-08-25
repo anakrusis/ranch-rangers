@@ -4,12 +4,14 @@
 
 
 song_music_data:
-	.db 3
+	.db 5
 	.dw .instruments
 	.dw .samples-3
 	.dw .song0ch0,.song0ch1,.song0ch2,.song0ch3,.song0ch4,307,256 ; New song
 	.dw .song1ch0,.song1ch1,.song1ch2,.song1ch3,.song1ch4,307,256 ; New song
 	.dw .song2ch0,.song2ch1,.song2ch2,.song2ch3,.song2ch4,307,256 ; New song
+	.dw .song3ch0,.song3ch1,.song3ch2,.song3ch3,.song3ch4,307,256 ; New song
+	.dw .song4ch0,.song4ch1,.song4ch2,.song4ch3,.song4ch4,307,256 ; New song
 
 .instruments:
 	.db $f0 ;instrument $00
@@ -330,7 +332,7 @@ song_music_data:
 .song2ch0loop:
 .ref110:
 	.db $81,$86,$0d,$81,$1d,$81,$14,$81,$0d,$81,$0f,$81,$1f,$81,$16,$81
-	.db $0f,$81,$0b,$81,$1b,$81,$12,$81,$0b
+	.db $0f,$81,$0c,$81,$1f,$81,$16,$81,$0c
 	.db $fd
 	.dw .song2ch0loop
 
@@ -339,7 +341,7 @@ song_music_data:
 .song2ch1loop:
 .ref111:
 	.db $86,$06,$81,$14,$81,$1b,$81,$16,$81,$08,$81,$16,$81,$1d,$81,$18
-	.db $81,$04,$81,$12,$81,$19,$81,$14,$81
+	.db $81,$05,$81,$16,$81,$1d,$81,$18,$81
 	.db $fd
 	.dw .song2ch1loop
 
@@ -366,3 +368,166 @@ song_music_data:
 	.db $af
 	.db $fd
 	.dw .song2ch4loop
+
+
+; New song
+.song3ch0:
+	.db $fb,$0b
+.song3ch0loop:
+.ref115:
+	.db $86,$0c,$81,$17,$81,$11,$81,$1c,$81,$10,$81,$1a,$81,$15,$81,$1f
+	.db $81
+.ref116:
+	.db $14,$81,$1f,$81,$19,$81,$24,$81,$18,$81,$22,$81,$11,$81,$1b,$81
+.ref117:
+	.db $10,$81,$1b,$81,$15,$81,$20,$81,$14,$81,$1e,$81,$0d,$81,$17,$81
+	.db $fd
+	.dw .song3ch0loop
+
+; New song
+.song3ch1:
+.song3ch1loop:
+.ref118:
+	.db $86,$1c,$13,$81,$1c,$21,$18,$81,$21,$1f,$17,$81,$1f,$24,$1c,$81
+	.db $24
+.ref119:
+	.db $24,$1b,$81,$24,$29,$20,$81,$29,$27,$1f,$81,$27,$20,$18,$81,$20
+.ref120:
+	.db $20,$17,$81,$20,$25,$1c,$81,$25,$23,$1b,$81,$23,$1c,$14,$81,$1c
+	.db $fd
+	.dw .song3ch1loop
+
+; New song
+.song3ch2:
+.song3ch2loop:
+.ref121:
+	.db $82,$23,$26,$28,$2b,$28,$2b,$2d,$30,$2f,$2b,$2a,$26,$28,$24,$23
+	.db $1f
+.ref122:
+	.db $2b,$2e,$30,$33,$30,$33,$35,$38,$37,$33,$32,$2e,$30,$2c,$2b,$27
+.ref123:
+	.db $27,$2a,$2c,$2f,$2c,$2f,$31,$34,$33,$2f,$2e,$2a,$2c,$28,$27,$23
+	.db $fd
+	.dw .song3ch2loop
+
+; New song
+.song3ch3:
+.song3ch3loop:
+.ref124:
+	.db $9f
+.ref125:
+	.db $9f
+.ref126:
+	.db $9f
+	.db $fd
+	.dw .song3ch3loop
+
+; New song
+.song3ch4:
+.song3ch4loop:
+.ref127:
+	.db $9f
+.ref128:
+	.db $9f
+.ref129:
+	.db $9f
+	.db $fd
+	.dw .song3ch4loop
+
+
+; New song
+.song4ch0:
+	.db $fb,$06
+.ref130:
+	.db $fb,$05,$80,$0c,$86,$11,$13,$15,$18,$1d,$1f,$21
+.ref131:
+	.db $24,$80,$29,$85,$00,$83
+.song4ch0loop:
+.ref132:
+	.db $fb,$06,$80,$24,$81,$1f,$81,$21,$81,$1c,$81,$1f,$81,$18,$81,$1a
+	.db $81,$15,$81
+.ref133:
+	.db $83,$18,$81,$1a,$81,$1f,$85,$24,$85,$21,$81
+.ref134:
+	.db $83,$1e,$81,$21,$89,$22,$85,$1f,$81
+.ref135:
+	.db $83,$1c,$81,$1f,$89,$21,$85,$28,$81
+	.db $fd
+	.dw .song4ch0loop
+
+; New song
+.song4ch1:
+.ref136:
+	.db $80,$13,$15,$18,$1d,$1f,$21,$24,$29
+.ref137:
+	.db $2b,$2d,$85,$00,$83
+.song4ch1loop:
+.ref138:
+	.db $80,$2b,$81,$24,$81,$26,$81,$21,$81,$24,$81,$1d,$81,$1f,$81,$1a
+	.db $81
+.ref139:
+	.db $83,$1c,$81,$1f,$81,$24,$85,$2b,$85,$2a,$81
+.ref140:
+	.db $83,$23,$81,$26,$89,$29,$85,$28,$81
+.ref141:
+	.db $83,$21,$81,$24,$89,$26,$85,$2d,$81
+	.db $fd
+	.dw .song4ch1loop
+
+; New song
+.song4ch2:
+.ref142:
+	.db $84,$24,$8d
+.ref143:
+	.db $81,$30,$8b
+.song4ch2loop:
+.ref144:
+	.db $84,$29,$81,$29,$85,$82,$29,$29,$84,$15,$81,$29,$81,$16,$81,$82
+	.db $29,$29
+.ref145:
+	.db $84,$18,$81,$18,$81,$28,$81,$82,$15,$15,$84,$1a,$81,$1a,$81,$28
+	.db $81,$82,$1a,$1a
+.ref146:
+	.db $84,$1f,$81,$1f,$81,$2a,$81,$82,$1f,$1f,$84,$18,$81,$18,$81,$26
+	.db $81,$82,$18,$18
+.ref147:
+	.db $84,$1d,$81,$1d,$81,$1a,$81,$82,$26,$26,$84,$16,$81,$22,$81,$1f
+	.db $81,$82,$2b,$2b
+	.db $fd
+	.dw .song4ch2loop
+
+; New song
+.song4ch3:
+.ref148:
+	.db $8f
+.ref149:
+	.db $8f
+.song4ch3loop:
+	.db $ff,$10
+	.dw .ref48
+	.db $ff,$10
+	.dw .ref49
+	.db $ff,$10
+	.dw .ref49
+.ref153:
+	.db $01,$81,$0e,$01,$09,$81,$0e,$01,$01,$81,$0e,$01,$09,$81,$09,$01
+	.db $fd
+	.dw .song4ch3loop
+
+; New song
+.song4ch4:
+.ref154:
+	.db $8f
+.ref155:
+	.db $8f
+.song4ch4loop:
+.ref156:
+	.db $9f
+.ref157:
+	.db $9f
+.ref158:
+	.db $9f
+.ref159:
+	.db $9f
+	.db $fd
+	.dw .song4ch4loop

@@ -84,6 +84,7 @@ validMovesY .rs 32
 
 	.rsset $0600
 turnAnimTimer .rs 1
+harvestAnimTimer .rs 1
 tileBufferLength .rs 1
 tileBufferIndex  .rs 1
 tileBuffer .rs 64
@@ -266,7 +267,7 @@ TurnScreenClear:
 	jsr closeCurrentTextBox
 	jsr updateHotbar
 	
-	lda #$05   ; A center chunk of the screen gets refreshed at this time because of a GUI issue with opening multiple windows
+	lda #$03   ; A center chunk of the screen gets refreshed at this time because of a GUI issue with opening multiple windows
 	sta param4
 	lda #$06
 	sta param5
@@ -277,7 +278,28 @@ TurnScreenClear:
 	jsr drawMapChunk
 
 TurnScreenTimerDone:
+HarvestScreenTimer:
+	lda guiMode
+	cmp #$0c
+	beq HarvestTimerUpdate
+	jmp HarvestScreenTimerDone
+HarvestTimerUpdate:
+	dec harvestAnimTimer
+	lda harvestAnimTimer
+	cmp #$00
+	bne HarvestScreenTimerDone
 	
+	jsr closeCurrentTextBox
+	
+	lda turn ; This is a contrived way to ensure EvaluateTurn chooses the right turn every time
+	eor #$01 ; it just inverts the bit so that the turn lands on its opposite
+	sta turn
+	jsr evaluateTurn
+	
+	lda #$00
+	jsr FamiToneMusicPlay
+	
+HarvestScreenTimerDone:
 	jsr InputHandler
 	
 	jsr FamiToneUpdate
@@ -334,7 +356,7 @@ CopyMapLoop:
 EndInit:
 	jsr drawMap
 	jsr initGameState
-	jsr player1TurnStart
+	jsr checkIfHarvestTime
 
 	lda #$90
     sta $2000   ;enable NMIs
@@ -496,7 +518,7 @@ endTurn:
 	
 	lda seasonTurnCounter
 	cmp #SEASONS_LENGTH_IN_TURNS
-	bne evaluateTurn
+	bne checkIfHarvestTime
 	
 	lda #$00
 	sta seasonTurnCounter
@@ -506,6 +528,30 @@ endTurn:
 	and #$03
 	sta season ; season cannot exceed 3
 
+checkIfHarvestTime:
+	lda season
+	cmp #$00
+	bne evaluateTurn
+	
+	lda seasonTurnCounter
+	cmp #$00
+	bne evaluateTurn
+	
+HarvestTime:
+	lda #$0c
+	sta guiMode
+	jsr openTextBox
+	
+	jsr giveHarvestMoney
+	
+	lda #$04
+	jsr FamiToneMusicPlay
+	
+	lda #$80
+	sta harvestAnimTimer
+	
+	rts
+	
 evaluateTurn:
 	lda turn
 	cmp #$00
@@ -534,6 +580,20 @@ p2EndTurn:
 	
 UnitHasCombinedAttackMove:
 	.db $01, $00, $01
+	
+giveHarvestMoney:
+	; temporarily adding 10 (decimal) to gold every harvest
+	; will be replaced with an evaluation of the farms on each tile
+	lda p1Gold
+	clc
+	adc #$0a
+	sta p1Gold
+	lda p2Gold
+	clc
+	adc #$0a
+	sta p2Gold
+	
+	rts
 	
 ;----- second 8k bank of PRG-ROM    
     .bank 1
@@ -633,7 +693,8 @@ text_BuildMenu:
 	.db $0b, $1e, $12, $15, $0d, $fe, $1e, $17, $12, $1d, $fe, $0f, $0a, $1b, $16, $ff
 	
 text_UnitMenu:
-	.db $1e, $17, $12, $1d, $fe, $0c, $11, $12, $0c, $14, $0e, $17, $fe, $0c, $18, $20, $ff
+	.db $1e, $17, $12, $1d, $fe, $0c, $11, $12, $0c, $14, $0e, $17, $24, $02, $10, $fe
+	.db $0c, $18, $20, $24, $24, $24, $24, $24, $02, $10, $ff
 	
 text_Player1Turn:
 	.db $2a, $fe, $19, $15, $0a, $22, $0e, $1b, $24, $01, $25, $1c, $24, $1d, $1e, $1b, $17, $26, $ff
@@ -663,18 +724,19 @@ text_Winter:
 	.db $20, $12, $17, $1d, $0e, $1b, $ff
 	
 text_Harvest:
-	.db $11, $0a, $1b, $1f, $0e, $1c, $1d, $ff
+	.db $2a, $fe, $11, $0a, $1b, $1f, $0e, $1c, $1d, $26, $ff
 	
 GuiX:
-	.db $01, $01, $05, $0a, $05, $05, $05, $03, $03, $01, $01, $01
+	;     0    1    2    3    4    5    6    7    8    9    a    b    c
+	.db $01, $01, $03, $08, $05, $05, $05, $03, $03, $01, $01, $01, $05
 GuiY:
-	.db $01, $01, $06, $06, $06, $06, $06, $06, $06, $01, $01, $01
+	.db $01, $01, $06, $06, $06, $06, $06, $06, $06, $01, $01, $01, $06
 GuiWidths:
-	.db $01, $01, $05, $05, $05, $05, $05, $0a, $0a, $01, $01, $01
+	.db $01, $01, $05, $07, $05, $05, $05, $0a, $0a, $01, $01, $01, $06
 GuiHeights:
-	.db $01, $01, $03, $05, $02, $04, $03, $02, $02, $01, $01, $01
+	.db $01, $01, $03, $03, $02, $04, $03, $02, $02, $01, $01, $01, $02
 GuiMenuSizes:
-	.db $00, $00, $02, $03, $01, $03, $02, $00, $00, $00, $00, $00
+	.db $00, $00, $02, $02, $01, $03, $02, $00, $00, $00, $00, $00, $00
 	
 GuiPointerLow:
 	.db $00, LOW(text_EngineTitle), LOW(text_BuildMenu), LOW(text_UnitMenu), LOW(text_FarmerMenu), LOW(text_ChickenMenu), LOW(text_CowMenu), LOW(text_Player1Turn), LOW(text_Player2Turn), $00, $00, $00, LOW(text_Harvest)
@@ -699,6 +761,10 @@ TheLicc:
 	.include "famitone4.asm" ; Sound engine
 	
 	.include "bcd.asm" ; bcd converter
+	
+TileData:
+	.db $1b, $0a, $0c, $12, $1c, $1d, $1c, $24, $11, $18, $16, $18, $19, $11, $18, $0b, $0e, $1c, $24, $1c, $0e, $21, $12, $1c, $1d, $1c, $24, $1d, $1b, $0a, $17, $1c, $19, $11, $18, $0b, $0e, $1c, $24, $10, $18, $24, $0a, $20, $0a, $22, $24, $0a, $17, $0d, $24, $0f, $12, $17, $0d, $24, $0a, $17, $18, $1d, $11, $0e, $1b, $24, $10, $0a, $16, $0e, $ff
+
 	
 ;---- vectors
     .org $FFFA     ;first of the three vectors starts here

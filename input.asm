@@ -25,6 +25,8 @@ InputBGuimodeCheck:
 	beq InputBTurnChangeScreen
 	cmp #$08
 	beq InputBTurnChangeScreen
+	cmp #$0c
+	beq InputBTurnChangeScreen
 	
 	; If unsure what to do then just go back to the main guimode, that's B button default behavior
 	lda #$01
@@ -127,6 +129,14 @@ InputAUnitScreen:
 	jsr AButtonUnitScreenHandler
 	jmp InputADone
 	
+InputACowScreen:
+AttackCow:
+	lda #$0a
+	sta guiMode
+	jsr calculateValidUnitMoves
+	jsr closeCurrentTextBox
+	jmp InputADone
+	
 InputAFarmerScreen:
 MoveFarmer:
 	lda #$09
@@ -139,6 +149,8 @@ InputAChickenScreen:
 	lda menuCursorPos
 	cmp #$00
 	beq MoveChicken
+	cmp #$02
+	beq DeleteChicken
 	jmp InputADone
 
 MoveChicken:
@@ -147,12 +159,17 @@ MoveChicken:
 	jsr calculateValidUnitMoves
 	jsr closeCurrentTextBox	
 	jmp InputADone
+
+DeleteChicken:
+	lda unitSelected
+	sta param3
+	lda turn
+	sta param4
+	jsr removeUnit
+	jsr removeUnitAnimationSfxInit
 	
-InputACowScreen:
-AttackCow:
-	lda #$0a
+	lda #$01
 	sta guiMode
-	jsr calculateValidUnitMoves
 	jsr closeCurrentTextBox
 	jmp InputADone
 
