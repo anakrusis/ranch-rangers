@@ -300,7 +300,14 @@ HarvestTimerUpdate:
 	jsr FamiToneMusicPlay
 	
 HarvestScreenTimerDone:
+SetColorBars:
+	lda #%00111110
+	sta $2001
+
 	jsr InputHandler
+	
+	lda #%00011110
+	sta $2001	
 	
 	jsr FamiToneUpdate
 	inc globalTick
@@ -599,6 +606,10 @@ giveHarvestMoney:
     .bank 1
     .org $E000
 	
+; set to 1 if you want the color bars or 0 if you dont
+BENCHMARK_MODE:
+	.db $01
+	
 ; The first four correspond to the map tile IDs
 MetaTiles:
 	.db $43, $43, $43, $43 ;water
@@ -684,7 +695,7 @@ text_TheLicc:
 	.db $1d, $31, $2e, $24, $15, $32, $2c, $2c, $ff ; "THE LICC"
 	
 text_EngineTitle:	
-	.db $1b, $1b, $28, $08, $27, $02, $03, $27, $02, $00, $02, $00, $ff ; farm 8/23/2020
+	.db $1b, $1b, $28, $08, $27, $02, $05, $27, $02, $00, $02, $00, $ff ; rr.8/25/2020
 	
 text_Icle:
 	.db $12, $0c, $15, $0e, $ff ; icle
