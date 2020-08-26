@@ -284,6 +284,12 @@ calcMovesDone:
 ; input: whatever checkUnitOnTile outputs, and guiMode which is set before
 ; output: validity of move in A
 mapDecideUnitMoveValid:
+
+	; todo special case for cow where:
+	; either unitSelectedX and param1 must match or unitSelectedY and param2 must match
+	; (both can't match because that would be matching the space of unitSelected and it would consider it friendly fire)
+	; so it has rook-type movement, only can go straight not diagonal
+
 	; attack mode?
 	lda guiMode
 	cmp #$0a

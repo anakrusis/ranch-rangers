@@ -524,6 +524,9 @@ player2TurnStart:
 	rts
 	
 endTurn:
+
+	; TODO check if either team has no units and issue the game over
+
 	inc turnCount
 	inc seasonTurnCounter
 	
@@ -600,6 +603,9 @@ ChickenRange:
 	.db $01, $02
 CowRange:
 	.db $02, $02
+	
+UnitPrices:
+	.db $00, $02, $02
 	
 giveHarvestMoney:
 	; temporarily adding 10 (decimal) to gold every harvest
@@ -708,7 +714,7 @@ text_TheLicc:
 	.db $1d, $31, $2e, $24, $15, $32, $2c, $2c, $ff ; "THE LICC"
 	
 text_EngineTitle:	
-	.db $1b, $1b, $28, $08, $27, $02, $05, $27, $02, $00, $02, $00, $ff ; rr.8/25/2020
+	.db $1b, $1b, $28, $08, $27, $02, $06, $27, $02, $00, $02, $00, $ff ; rr.8/26/2020
 	
 text_Icle:
 	.db $12, $0c, $15, $0e, $ff ; icle

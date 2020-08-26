@@ -555,73 +555,13 @@ drawMapChunkXLoop:
 	
 	stx param2
 	sty param3
-
-	;stx param8 ; param8 and param9 temporarily hold the x and y values for now
-	;sty param9 
 	
-	txa ; the following subroutines clobber these so we have to be careful with them uwu
+	txa ; the following subroutines clobber x
 	pha
-	; tya
-	; pha
 	
 	; this first portion of the map chunk rendering attempts to bypass the typical tile drawing by
 	; iterating through each players units and seeing if their coordinates match up with the X/Y iterators.
 	; If so, it loads those metatiles to the buffer and skips the tile rendering.
-; drawMapChunkTileCheckUnit:	
-	; jsr checkUnitOnTile
-	; ldx param3 ; index already in x
-	; cpx #$ff
-	; bne drawMapChunkTileCheckUnitAllegiance
-	
-	; pla ; before leaving the player unit iteration loop, we have to restore the original register values!
-	; tay
-	; pla
-	; tax	
-	
-	; jmp drawTileNoUnit
-	
-; drawMapChunkTileCheckUnitAllegiance:
-	; lda param4
-	; cmp #$00
-	; beq drawTileP1Unit
-	; jmp drawTileP2Unit
-	
-; drawTileP1Unit:
-	; lda param3
-	; clc
-	; adc #P1_UNITS_START_OFFSET
-	; sta param1 ; param1 is used by placeTileInBuffer
-	
-	; lda param8
-	; sta param2
-	; lda param9
-	; sta param3
-	
-	; jmp drawTileUnitDone
-	
-; drawTileP2Unit:
-	; lda param3
-	; clc
-	; adc #P2_UNITS_START_OFFSET
-	; sta param1
-	
-	; lda param8
-	; sta param2
-	; lda param9
-	; sta param3
-
-	; jmp drawTileUnitDone
-	
-; drawTileUnitDone:
-	; jsr placeTileInBuffer
-	
-	; pla ; before leaving the player unit iteration loop, we have to restore the original register values!
-	; tay
-	; pla
-	; tax
-	; jmp drawMapChunkXLoopTail
-
-;OLD CODE START	
 	ldx #$00
 scanP1PiecesLoop:
 	lda p1PiecesX, x
@@ -636,7 +576,7 @@ scanP1PiecesLoop:
 	
 	lda p1PiecesType, x           ; if both the X and Y coordinates match, then add the unit to the buffer
 	clc 
-	adc #$04
+	adc #P1_UNITS_START_OFFSET
 	sta param1
 	; param2 and param3 are already set up and good to go
 	
@@ -668,7 +608,7 @@ scanP2PiecesLoop:
 	
 	lda p2PiecesType, x           ; if both the X and Y coordinates match, then add the unit to the buffer
 	clc 
-	adc #$11
+	adc #P2_UNITS_START_OFFSET
 	sta param1
 	; param2 and param3 are already set up and good to go
 	
@@ -684,8 +624,6 @@ scanP2PiecesLoopTail:
 	cpx p2UnitCount
 	bne scanP2PiecesLoop
 	
-	; pla
-	; tay
 	pla
 	tax
 
@@ -753,6 +691,7 @@ drawMapChunkDone:
 	rts
 	
 drawSprites:
+	; todo some sort of OAM pointer index type thing
 allSpritesOffscreen:
 	ldx #$00
 allSpritesOffscreenLoop:
