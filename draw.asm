@@ -552,19 +552,76 @@ drawMapChunkYLoop:
 
 	ldx param4
 drawMapChunkXLoop:
+	
+	stx param2
+	sty param3
 
-	stx param2 ; param2 and param3 temporarily hold the x and y values for now
-	sty param3 
+	;stx param8 ; param8 and param9 temporarily hold the x and y values for now
+	;sty param9 
 	
-	txa
+	txa ; the following subroutines clobber these so we have to be careful with them uwu
 	pha
+	; tya
+	; pha
 	
-	; Hey, this first portion of the map chunk rendering attempts to bypass the typical tile drawing by
+	; this first portion of the map chunk rendering attempts to bypass the typical tile drawing by
 	; iterating through each players units and seeing if their coordinates match up with the X/Y iterators.
 	; If so, it loads those metatiles to the buffer and skips the tile rendering.
+; drawMapChunkTileCheckUnit:	
+	; jsr checkUnitOnTile
+	; ldx param3 ; index already in x
+	; cpx #$ff
+	; bne drawMapChunkTileCheckUnitAllegiance
 	
-	; first iterating through PLAYER 1 UNITS:
+	; pla ; before leaving the player unit iteration loop, we have to restore the original register values!
+	; tay
+	; pla
+	; tax	
 	
+	; jmp drawTileNoUnit
+	
+; drawMapChunkTileCheckUnitAllegiance:
+	; lda param4
+	; cmp #$00
+	; beq drawTileP1Unit
+	; jmp drawTileP2Unit
+	
+; drawTileP1Unit:
+	; lda param3
+	; clc
+	; adc #P1_UNITS_START_OFFSET
+	; sta param1 ; param1 is used by placeTileInBuffer
+	
+	; lda param8
+	; sta param2
+	; lda param9
+	; sta param3
+	
+	; jmp drawTileUnitDone
+	
+; drawTileP2Unit:
+	; lda param3
+	; clc
+	; adc #P2_UNITS_START_OFFSET
+	; sta param1
+	
+	; lda param8
+	; sta param2
+	; lda param9
+	; sta param3
+
+	; jmp drawTileUnitDone
+	
+; drawTileUnitDone:
+	; jsr placeTileInBuffer
+	
+	; pla ; before leaving the player unit iteration loop, we have to restore the original register values!
+	; tay
+	; pla
+	; tax
+	; jmp drawMapChunkXLoopTail
+
+;OLD CODE START	
 	ldx #$00
 scanP1PiecesLoop:
 	lda p1PiecesX, x
@@ -627,9 +684,12 @@ scanP2PiecesLoopTail:
 	cpx p2UnitCount
 	bne scanP2PiecesLoop
 	
+	; pla
+	; tay
 	pla
 	tax
 
+drawTileNoUnit:
 	; map tile has to get to A so here goes...
 	tya
 	sec
@@ -981,13 +1041,11 @@ bcdGoldDisplay:
 	sta Hex0
 	jsr HexToDecimal.8
 	
-	lda DecHundreds
-	sta stringBuffer+12
 	lda DecTens
-	sta stringBuffer+13
+	sta stringBuffer+11
 	lda DecOnes
-	sta stringBuffer+14
+	sta stringBuffer+12
 	lda #$10
-	sta stringBuffer+15 ; "g"
+	sta stringBuffer+13 ; "g"
 	
 	rts

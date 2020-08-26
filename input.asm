@@ -133,7 +133,7 @@ InputACowScreen:
 AttackCow:
 	lda #$0a
 	sta guiMode
-	jsr calculateValidUnitMoves
+	jsr calculateUnitMoves
 	jsr closeCurrentTextBox
 	jmp InputADone
 	
@@ -141,7 +141,7 @@ InputAFarmerScreen:
 MoveFarmer:
 	lda #$09
 	sta guiMode
-	jsr calculateValidUnitMoves
+	jsr calculateUnitMoves
 	jsr closeCurrentTextBox
 	jmp InputADone
 	
@@ -149,6 +149,8 @@ InputAChickenScreen:
 	lda menuCursorPos
 	cmp #$00
 	beq MoveChicken
+	cmp #$01
+	beq AttackChicken
 	cmp #$02
 	beq DeleteChicken
 	jmp InputADone
@@ -156,8 +158,15 @@ InputAChickenScreen:
 MoveChicken:
 	lda #$09
 	sta guiMode
-	jsr calculateValidUnitMoves
+	jsr calculateUnitMoves
 	jsr closeCurrentTextBox	
+	jmp InputADone
+	
+AttackChicken:
+	lda #$0a
+	sta guiMode
+	jsr calculateUnitMoves
+	jsr closeCurrentTextBox
 	jmp InputADone
 
 DeleteChicken:

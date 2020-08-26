@@ -43,6 +43,8 @@ unitSelected .rs 1 ; index
 unitSelectedX .rs 1 
 unitSelectedY .rs 1
 unitSelectedType .rs 1
+p1UnitCount .rs 1
+p2UnitCount .rs 1
 
 buttons1 .rs 1
 buttons2 .rs 1
@@ -66,8 +68,6 @@ p2PiecesY    .rs 8
 p2PiecesType .rs 8
 
 	.rsset $0500
-p1UnitCount .rs 1
-p2UnitCount .rs 1
 p1Gold .rs 2
 p2Gold .rs 2
 p1Kills .rs 1
@@ -100,6 +100,10 @@ JOYPAD2 = $4017
 
 MAP_DRAW_Y = $03
 MAX_METATILE_CHANGES = $02 ; per frame, 8 tiles per frame
+
+; in the metatile data
+P1_UNITS_START_OFFSET = $04
+P2_UNITS_START_OFFSET = $11
 
 SEASONS_LENGTH_IN_TURNS = $03
 
@@ -586,7 +590,16 @@ p2EndTurn:
 	.include "input.asm"
 	
 UnitHasCombinedAttackMove:
-	.db $01, $00, $01
+	.db $00, $00, $01
+	
+; first one is move range, second is attack range
+UnitRanges:
+FarmerRange:
+	.db $01, $01
+ChickenRange:
+	.db $01, $02
+CowRange:
+	.db $02, $02
 	
 giveHarvestMoney:
 	; temporarily adding 10 (decimal) to gold every harvest

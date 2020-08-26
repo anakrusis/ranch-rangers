@@ -100,8 +100,27 @@ ValidMoveNotFound:
 	jmp moveUnitInvalidInput
 	
 ValidMoveFound:
-	ldy unitSelected
 
+	; for attack moves, only removing a unit if there is one currently on the space.
+	; this cannot happen with regular movement moves.
+	lda cursorX
+	sta param1
+	lda cursorY
+	sta param2
+	jsr removeUnitIfPresent
+	; removeUnitIfPresent returns a 0 if there is no unit which means it would be movement not attack
+	cmp #$00
+	beq MoveUnitCheckAllegiance
+	
+	; if there is a unit there, then it must be an attack!
+	; a unit that has a seperate attack/movement move would not want to move when attacking!
+	ldy unitSelectedType
+	lda UnitHasCombinedAttackMove, y
+	cmp #$00
+	beq moveUnitDone
+
+MoveUnitCheckAllegiance:
+	ldy unitSelected
 	lda turn
 	cmp #$00
 	beq MoveP1Unit
@@ -149,73 +168,93 @@ moveUnitDrawUpdate:
 	sta param5
 	jsr drawMapChunk
 	
-	jsr endTurn
 	jmp moveUnitDone
 	
 moveUnitInvalidInput:
 	lda #$02
 	ldx #$00
 	jsr FamiToneSfxPlay
+	rts
 	
 moveUnitDone:
+	jsr endTurn
 	rts
 	
 ; no params, takes in unitSelected and makes an array of moves that are possible
-calculateValidUnitMoves:
-	lda unitSelectedY
-	asl a
-	asl a
-	asl a
-	asl a
-	clc
-	adc unitSelectedX
-	
-	sec
-	sbc #$20
-	tax
-	
-	clc
-	adc #$40
-	sta param9 ; param9 contains an index two rows below
-
+; param 6 and 7 used internally for the endpoints of each loop x and y
+calculateUnitMoves:
 	lda #$00
 	sta validMovesCount
-	
-mapValidCalcLoop:
 
-	; valid moves can only be on grass tile, firstly!
-mapCheckTerrainValue:
-	lda MapData, x
+calcRange:
+	lda unitSelectedType
+	asl a
+	sta param8
+
+	lda guiMode ; such that 0a(attack) becomes 01 and 09(move) becomes 00
+	sec
+	sbc #$09 
+	clc
+	adc param8
+	tay
+	
+	lda UnitRanges, y ; param8 has the "radius" of sorts 
+	sta param8
+	; these are the endpoints which will be used to compare the loop
+	lda unitSelectedX ; x endpoint set
+	clc
+	adc param8
+	sta param6
+	
+	lda unitSelectedY ; y endpoint set
+	clc
+	adc param8
+	sta param7
+	
+	inc param6 ; the reason for this is by nature of the loops, stopping when they equal these values!
+	inc param7
+	
+	; these are the startpoints used to begin the loop
+	lda unitSelectedY
+	sec
+	sbc param8
+	tay
+calcMovesYLoop:
+
+	sty param2
+
+	; ditto
+	lda unitSelectedX
+	sec
+	sbc param8
+	tax
+calcMovesXLoop:
+	
+	stx param1
+	
+	tya
+	pha
+	
+calcMovesCheckTerrain:
+	lda param2
+	asl a       
+	asl a      
+	asl a
+	asl a
+	clc
+	adc param1
+	tay
+	lda MapData, y
 	cmp #$02
-	beq mapCheckUnit
-	jmp mapValidCalcLoopTail
+	beq calcMovesCheckUnit
+	jmp calcMovesXLoopTail
 	
-mapCheckUnit:
-	txa
-	and #$0f
-	sta param1 ; x value is index % 16
-	txa
-	lsr a      ; y value is floor(index/16)
-	lsr a
-	lsr a
-	lsr a
-	sta param2
+calcMovesCheckUnit:
+	; param1 and param2 already setup!
 	jsr checkUnitOnTile
-	
 	jsr mapDecideUnitMoveValid
 	cmp #$00
-	beq mapValidCalcLoopTail
-	
-	lda unitSelectedX
-	sta param3
-	lda unitSelectedY
-	sta param4
-	jsr chebyshevDistance
-	
-	;is the distance from the unit to this tile 1? (todo unique stuff based on unit based stuff)
-	lda param5
-	cmp #$01
-	bne mapValidCalcLoopTail
+	beq calcMovesXLoopTail
 	
 	; if so, place a new move into the valid moves list at the proper index
 	ldy validMovesCount
@@ -224,14 +263,22 @@ mapCheckUnit:
 	lda param2
 	sta validMovesY, y
 	
-	inc validMovesCount
-	
-mapValidCalcLoopTail:
+	inc validMovesCount	
+
+calcMovesXLoopTail:
+	pla
+	tay
+
 	inx
-	
-	cpx param9
-	bne mapValidCalcLoop
-	
+	cpx param6
+	bne calcMovesXLoop
+
+calcMovesYLoopTail:
+	iny
+	cpy param7
+	bne calcMovesYLoop
+
+calcMovesDone:
 	rts
 	
 ; input: whatever checkUnitOnTile outputs, and guiMode which is set before
@@ -490,3 +537,21 @@ removeUnitAnimationSfxInit:
 	jsr FamiToneSfxPlay
 	
 	rts
+
+; param1/2 X/Y
+; returns 1 in A if unit is present and 0 if no unit is present
+removeUnitIfPresent:
+	jsr checkUnitOnTile
+	lda param3
+	cmp #$ff
+	beq noUnitPresent
+
+	; param3 and param4 are already set from checkUnitOnTile
+	jsr removeUnit
+	lda #$01
+	rts
+	
+noUnitPresent:
+	lda #$00
+	rts
+	
