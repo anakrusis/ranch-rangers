@@ -343,9 +343,19 @@ drawMap:
 mapByteLoop:
 	
 	lda MapData, x
+	cmp #$02
+	bne drawMapTileRegular
+	
+	jsr HandleGrassDraw
+	sta param1
+	jmp drawMapTransform
+
+drawMapTileRegular:	
+	lda MapData, x
 	sta currentMapByte
 	sta param1
-	
+
+drawMapTransform:
 	txa ; x coordinate (modulo 16)
 	and #%00001111
 	sta param2
@@ -366,7 +376,6 @@ mapByteLoop:
 	bne mapByteLoop
 	
 drawMapDone:
-	
 	rts
 	
 ; this is simply buffering metatiles and can be called whenever!
@@ -647,6 +656,11 @@ drawTileNoUnit:
 	
 	ldx param2
 	lda MapData, x ; now A has the tile value, which is now given to param1
+	cmp #$02
+	bne NonGrassDraw
+	jsr HandleGrassDraw
+	
+NonGrassDraw:
 	sta param1
 	
 	pla ; x is back in business
@@ -688,6 +702,27 @@ drawMapRowDone:
 	jmp drawMapChunkYLoop
 
 drawMapChunkDone:	
+	rts
+	
+; input: iterator in X (either X position or combined Y*16+X, either work)
+; output: tile value in A
+HandleGrassDraw:
+	; if a grass tile, lets check to see if its on the edge of the border
+	txa
+	and #$0f
+	cmp #$07
+	beq drawBorderLeft
+	cmp #$08
+	beq drawBorderRight
+	lda #$02
+	rts
+	
+drawBorderLeft:
+	lda #$15
+	rts
+
+drawBorderRight
+	lda #$16
 	rts
 	
 drawSprites:
@@ -926,7 +961,7 @@ StringTest:
 updateStringBuffer:
 	ldx #$00
 clearStringBufferLoop:
-	lda #$28
+	lda #$28 ; period character
 	sta stringBuffer, x
 	
 	inx
@@ -964,17 +999,8 @@ bufferPlayerNameLoop:
 	bne bufferPlayerNameLoop
 	
 bufferGoldText:
-	lda turn
-	cmp #$00
-	beq loadPlayer1Gold
-	jmp loadPlayer2Gold
-
-loadPlayer1Gold:
-	lda p1Gold
-	jmp bcdGoldDisplay
-
-loadPlayer2Gold:
-	lda p2Gold
+	ldy turn
+	lda p1Gold, y
 	
 bcdGoldDisplay:
 	sta Hex0
@@ -986,5 +1012,29 @@ bcdGoldDisplay:
 	sta stringBuffer+12
 	lda #$10
 	sta stringBuffer+13 ; "g"
+	
+bcdKillCount:
+	lda p1Kills, y
+	sta Hex0
+	jsr HexToDecimal.8
+	
+	lda DecTens
+	sta stringBuffer+17
+	lda DecOnes
+	sta stringBuffer+18
+	lda #$14
+	sta stringBuffer+19 ; "k"	
+
+bcdDeathCount:
+	lda p1Deaths, y
+	sta Hex0
+	jsr HexToDecimal.8
+	
+	lda DecTens
+	sta stringBuffer+23
+	lda DecOnes
+	sta stringBuffer+24
+	lda #$0d
+	sta stringBuffer+25 ; "d"
 	
 	rts

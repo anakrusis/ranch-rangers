@@ -374,6 +374,16 @@ AButtonMainScreenHandler:
 	; if no unit occupies the space, we can treat it like a normal tile which you can place farms or spawn units on...
 
 AButtonMainScreenNoUnit:
+
+	; first, you can only place tiles or units within your borders
+	; (you can interact with units of yours outside your borders but you have to spawn them in your border)
+	lda cursorX
+	lsr a
+	lsr a
+	lsr a
+	cmp turn
+	bne AButtonMainScreenInvalidInput
+
 	lda cursorY ; ensures the build menu only opens on grass tiles
 	asl a
 	asl a

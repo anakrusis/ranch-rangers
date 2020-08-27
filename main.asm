@@ -68,10 +68,12 @@ p2PiecesY    .rs 8
 p2PiecesType .rs 8
 
 	.rsset $0500
-p1Gold .rs 2
-p2Gold .rs 2
+p1Gold .rs 1
+p2Gold .rs 1
 p1Kills .rs 1
 p2Kills .rs 1
+p1Deaths .rs 1
+p2Deaths .rs 1
 
 Hex0 .rs 1
 DecOnes .rs 1
@@ -660,11 +662,16 @@ Player2UnitMetaTiles:
 	.db $86, $87, $96, $97 ;cow(bull)
 	.db $00, $00, $00, $00 ;reserved
 	
+BorderTiles: ; $15-16
+	.db $51, $44, $40, $44 ; p1 border
+	.db $45, $40, $45, $40 ; p2 border
+	
 MetaTileAttributes:
 	.db $00, $55, $55, $55 ; map tiles
 	.db $aa, $aa, $aa, $aa ; player 1 tiles
 	.db $00, $00, $00, $00, $00, $00, $00, $00, $00 ; textbox tiles
 	.db $ff, $ff, $ff, $ff ; player 2 tiles
+	.db $aa, $ff ; border tiles
 	
 testMap:
 	;.db %01100110, %00100110, %01100110, %00100110
