@@ -21,6 +21,7 @@ season .rs 1     ; 00 = spring, 01 = summer, 02 = autumn, 03 = winter
 seasonTurnCounter .rs 1
 
 ; read the docs on this one lol... It Means Many Things
+gameMode .rs 1
 guiMode .rs 1 
 menuCursorPos .rs 1
 menuSize .rs 1 ; number of items in the menu to select from
@@ -52,10 +53,16 @@ prevButtons1 .rs 1
 prevButtons2 .rs 1
 
 	.rsset $0100 ; Try not to add too much, or else you might risk hitting the stack
+turnAnimTimer .rs 1
+harvestAnimTimer .rs 1
 dpadInputTimer .rs 1
 hotbarTextNeedsRefresh .rs 1
 seasonPaletteChangeFlag .rs 1
+unitHeavenXpos  .rs 1 ; for the animation when a unit deads
+unitHeavenType  .rs 1
+unitHeavenTimer .rs 1
 
+;FULL RESERVED FOR MAP AND UNIT DATA
 	.rsset $0400 ; Hey 400 page is full, dont add anything more here
 MapData .rs 192 ; the whole mapa xD
 
@@ -84,9 +91,8 @@ validMovesCount .rs 1
 validMovesX .rs 32
 validMovesY .rs 32
 
+; RESERVED FOR TILE BUFFERING
 	.rsset $0600
-turnAnimTimer .rs 1
-harvestAnimTimer .rs 1
 tileBufferLength .rs 1
 tileBufferIndex  .rs 1
 tileBuffer .rs 64
@@ -356,6 +362,8 @@ initCursorSprite:
 	cpx #$10
 	bne initCursorSprite
 	
+	; random map generation code here TODO
+	
 	ldx #$c0
 CopyMapLoop:
 	lda testMap, x
@@ -364,20 +372,61 @@ CopyMapLoop:
 	bne CopyMapLoop
 	
 EndInit:
-	jsr drawMap
-	jsr initGameState
-	jsr checkIfHarvestTime
+	jsr initGlobal
+	jsr initDebugMenu
 
 	lda #$90
     sta $2000   ;enable NMIs
 	
 	lda #%00011110 ; background and sprites enabled
-	lda $2001
+	sta $2001
 	
 forever:
     jmp forever
 	
+initGlobal:
+	; these have to be set or else the GUI glitches when trying to close a nonexistent gui lol
+	sta activeGuiWidth
+	sta activeGuiHeight
+	lda #$05
+	sta activeGuiX
+	sta activeGuiY
+	
+	; initialize music!!
+	lda #$01 ; ntsc
+	ldx #LOW(song_music_data)
+	ldy #HIGH(song_music_data)
+	jsr FamiToneInit
+	
+	ldx #LOW(sounds)
+	ldy #HIGH(sounds)
+	jsr FamiToneSfxInit
+	
+	rts
+	
+initDebugMenu:
+	lda #$10
+	sta guiMode
+	jsr openTextBox
+	
+	lda #$01
+	jsr FamiToneMusicPlay
+	
+	rts
+	
 initGameState:
+	lda #$10 ; nmi disabled
+	sta $2000
+	lda #%00000110 ; background and sprites disabled
+	sta $2001
+	
+	jsr drawMap
+	
+	lda #$90 ; nmi enabled
+	sta $2000
+	lda #%00011110 ; background and sprites enabled
+	sta $2001
+	
 	lda #$01
 	sta guiMode ; main guimode
 	
@@ -405,25 +454,10 @@ initGameState:
 	sta param7
 	jsr placeUnit
 	
-	; these have to be set or else the GUI glitches when trying to close a nonexistent gui lol
-	sta activeGuiWidth
-	sta activeGuiHeight
-	lda #$05
-	sta activeGuiX
-	sta activeGuiY
-	
-	; initialize music!!
-	lda #$01 ; ntsc
-	ldx #LOW(song_music_data)
-	ldy #HIGH(song_music_data)
-	jsr FamiToneInit
-	
-	ldx #LOW(sounds)
-	ldy #HIGH(sounds)
-	jsr FamiToneSfxInit
-	
 	lda #$00
 	jsr FamiToneMusicPlay
+	
+	jsr checkIfHarvestTime
 	
 	rts
 	
@@ -694,6 +728,17 @@ CursorSpriteData:
 	.db $08, $80, %10000011, $00 
 	.db $08, $80, %11000011, $08 
 	
+MetaSpriteX:
+	.db $00, $08, $00, $08
+MetaSpriteY:
+	.db $00, $00, $08, $08
+	
+MetaSprites:
+	;death sprites first
+	.db $00, $10, $00, $10 ;farmer NOT TO BE USED
+	.db $60, $61, $70, $71 ;chicken
+	.db $62, $63, $72, $73 ;cow
+	
 IndicatorSpriteAnimation:
 	.db $82, $83, $84, $83
 
@@ -763,23 +808,26 @@ text_Winter:
 text_Harvest:
 	.db $2a, $fe, $11, $0a, $1b, $1f, $0e, $1c, $1d, $26, $ff
 	
+text_DebugMenu:
+	.db $16, $0e, $17, $1e, $fe, $0d, $0e, $0b, $1e, $10, $24, $16, $18, $0d, $0e, $fe, $17, $18, $1b, $16, $0a, $15, $ff
+	
 GuiX:
-	;     0    1    2    3    4    5    6    7    8    9    a    b    c
-	.db $01, $01, $03, $08, $05, $05, $05, $03, $03, $01, $01, $01, $05
+	;     0    1    2    3    4    5    6    7    8    9    a    b    c    d    e    f   10
+	.db $01, $01, $03, $08, $05, $05, $05, $03, $03, $01, $01, $01, $05, $01, $01, $01, $06
 GuiY:
-	.db $01, $01, $06, $06, $06, $06, $06, $06, $06, $01, $01, $01, $06
+	.db $01, $01, $06, $06, $06, $06, $06, $06, $06, $01, $01, $01, $06, $01, $01, $01, $06
 GuiWidths:
-	.db $01, $01, $05, $07, $05, $05, $05, $0a, $0a, $01, $01, $01, $06
+	.db $01, $01, $05, $07, $05, $05, $05, $0a, $0a, $01, $01, $01, $06, $01, $01, $01, $07
 GuiHeights:
-	.db $01, $01, $03, $03, $02, $04, $03, $02, $02, $01, $01, $01, $02
+	.db $01, $01, $03, $03, $02, $04, $03, $02, $02, $01, $01, $01, $02, $01, $01, $01, $06
 GuiMenuSizes:
-	.db $00, $00, $02, $02, $01, $03, $02, $00, $00, $00, $00, $00, $00
+	.db $00, $00, $02, $02, $01, $03, $02, $00, $00, $00, $00, $00, $00, $01, $01, $01, $02
 	
 GuiPointerLow:
-	.db $00, LOW(text_EngineTitle), LOW(text_BuildMenu), LOW(text_UnitMenu), LOW(text_FarmerMenu), LOW(text_ChickenMenu), LOW(text_CowMenu), LOW(text_Player1Turn), LOW(text_Player2Turn), $00, $00, $00, LOW(text_Harvest)
+	.db $00, LOW(text_EngineTitle), LOW(text_BuildMenu), LOW(text_UnitMenu), LOW(text_FarmerMenu), LOW(text_ChickenMenu), LOW(text_CowMenu), LOW(text_Player1Turn), LOW(text_Player2Turn), $00, $00, $00, LOW(text_Harvest), $00, $00, $00, LOW(text_DebugMenu)
 
 GuiPointerHigh:
-	.db $00, HIGH(text_EngineTitle), HIGH(text_BuildMenu), HIGH(text_UnitMenu), HIGH(text_FarmerMenu), HIGH(text_ChickenMenu), HIGH(text_CowMenu), HIGH(text_Player1Turn), HIGH(text_Player2Turn), $00, $00, $00, HIGH(text_Harvest)
+	.db $00, HIGH(text_EngineTitle), HIGH(text_BuildMenu), HIGH(text_UnitMenu), HIGH(text_FarmerMenu), HIGH(text_ChickenMenu), HIGH(text_CowMenu), HIGH(text_Player1Turn), HIGH(text_Player2Turn), $00, $00, $00, HIGH(text_Harvest), $00, $00, $00, HIGH(text_DebugMenu)
 	
 Song:
 	.db $7f, $20, $02, $25, $0c ; fantasia in funk

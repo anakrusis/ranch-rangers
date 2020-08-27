@@ -573,7 +573,24 @@ removeP2UnitDone:
 ; only used when voluntarily deleting a unit, not when in battle.
 removeUnitAnimationSfxInit:
 
-	; todo init some animation timer here lol
+	;animation init here
+	lda unitSelectedX
+	asl a
+	asl a
+	asl a
+	asl a
+	sta unitHeavenXpos
+	lda unitSelectedY
+	clc
+	adc #MAP_DRAW_Y
+	asl a
+	asl a
+	asl a
+	asl a
+	sta unitHeavenTimer
+	
+	lda unitSelectedType
+	sta unitHeavenType
 
 	lda #$05
 	ldx #$00

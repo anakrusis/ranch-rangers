@@ -748,7 +748,7 @@ allSpritesOffscreenLoop:
 	lda #$fe
 	sta $0200, y ; with no offset it just places the y variable offscreen, this is fine enough
 	
-	lda #%11011111
+	lda #%00011111
 	and $0202, y
 	sta $0202, y
 	
@@ -798,14 +798,14 @@ drawMapCursor:
 	lda #$80 ; the rectangly icon tile
 	sta $0201
 	
-	; lda #%00000011 ; all that flippy stuff lol
-	; sta $0202
-	; lda #%01000011
-	; sta $0206
-	; lda #%10000011
-	; sta $020a
-	; lda #%11000011
-	; sta $020e
+	lda #%00000011 ; all that flippy stuff lol
+	sta $0202
+	lda #%01000011
+	sta $0206
+	lda #%10000011
+	sta $020a
+	lda #%11000011
+	sta $020e
 	
 	jmp drawCursorDone
 	
@@ -855,23 +855,23 @@ drawMenuCursor:
 	sta $0201
 	
 drawCursorDone:
+	
+	ldy #$10 ; a pointer to have into OAM just in case we skip the move indicator
 
 	lda guiMode
 	cmp #$09
-	beq checkValidMoveCount
+	beq drawValidMoveIndicators
 	cmp #$0a
-	beq checkValidMoveCount
-	jmp drawValidMoveIndicatorsDone
-
-checkValidMoveCount:
-	lda validMovesCount
-	cmp #$00
-	bne drawValidMoveIndicators
+	beq drawValidMoveIndicators
 	jmp drawValidMoveIndicatorsDone
 
 drawValidMoveIndicators:
 
 	ldx #$00
+	cpx validMovesCount
+	bne validMoveIndicatorLoop
+	jmp drawValidMoveIndicatorsDone
+	
 validMoveIndicatorLoop:
 
 	; generating the pointer into OAM and putting it in Y
@@ -922,6 +922,52 @@ validMoveIndicatorLoopTail:
 	bne validMoveIndicatorLoop
 
 drawValidMoveIndicatorsDone:
+	ldx #$00
+	lda unitHeavenTimer
+	cmp #$00
+	bne drawHeavenSpriteLoop
+	jmp drawHeavenSpriteDone
+	
+drawHeavenSpriteLoop:
+
+	; generating the pointer into OAM and putting it in Y
+	txa
+	clc
+	adc #$04 ; adding 4 onto the index so we dont hurt the cursor sprite (4 sprites rly)
+	asl a
+	asl a ; times 4 cus oam entrys are 4 long
+	tay
+
+	lda unitHeavenTimer
+	clc
+	adc MetaSpriteY, x
+	sta $0200, y
+	
+	lda unitHeavenXpos
+	clc
+	adc MetaSpriteX, x
+	sta $0203, y
+	
+	stx param1 ; temp
+	
+	lda unitHeavenType
+	asl a
+	asl a
+	clc 
+	adc param1
+	tax
+	lda MetaSprites, x
+	sta $0201, y
+	
+	ldx param1
+
+	inx
+	cpx #$04
+	bne drawHeavenSpriteLoop
+
+	dec unitHeavenTimer
+
+drawHeavenSpriteDone:
 drawSpritesDone:
 	rts
 	

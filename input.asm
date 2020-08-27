@@ -27,6 +27,8 @@ InputBGuimodeCheck:
 	beq InputBTurnChangeScreen
 	cmp #$0c
 	beq InputBTurnChangeScreen
+	cmp #$10
+	beq InputBTurnChangeScreen
 	
 	; If unsure what to do then just go back to the main guimode, that's B button default behavior
 	lda #$01
@@ -93,6 +95,8 @@ InputAGuimodeCheck:
 	beq InputAMoveScreen
 	cmp #$0a
 	beq InputAAttackScreen
+	cmp #$10
+	beq InputADebugMenuScreen
 	
 	jmp InputADone
 	
@@ -112,17 +116,23 @@ InputAAttackScreen:
 	jmp InputADone
 	
 InputABuildScreen:
-
+	jsr AButtonBuildScreenHandler
+	jmp InputADone
+	
+InputADebugMenuScreen:
 	lda menuCursorPos
-	cmp #$01
-	beq PlaceFarm
 	cmp #$00
-	beq UnitMenu
+	beq startgameDebug
+	jmp startgameNormal
 
-UnitMenu:
-	lda #$03
-	sta guiMode
-	jsr openTextBox
+startgameDebug:
+	lda #$80
+	sta gameMode
+	jsr initGameState
+	jmp InputADone
+	
+startgameNormal:
+	jsr initGameState
 	jmp InputADone
 	
 InputAUnitScreen:
@@ -130,11 +140,7 @@ InputAUnitScreen:
 	jmp InputADone
 	
 InputACowScreen:
-AttackCow:
-	lda #$0a
-	sta guiMode
-	jsr calculateUnitMoves
-	jsr closeCurrentTextBox
+	jsr AButtonCowScreenHandler
 	jmp InputADone
 	
 InputAFarmerScreen:
@@ -180,36 +186,6 @@ DeleteChicken:
 	lda #$01
 	sta guiMode
 	jsr closeCurrentTextBox
-	jmp InputADone
-
-PlaceFarm:
-	lda cursorY
-	asl a
-	asl a
-	asl a
-	asl a
-	clc
-	adc cursorX
-	tax
-	lda #$03
-	sta MapData, x
-	
-	lda cursorX
-	sta param4
-	lda cursorY
-	clc
-	adc #MAP_DRAW_Y
-	sta param5
-	lda #$01
-	sta param6
-	sta param7
-	jsr drawMapChunk
-
-	lda #$01
-	sta guiMode
-	jsr closeCurrentTextBox
-	jsr endTurn
-	
 	jmp InputADone
 	
 InputADone:
@@ -518,4 +494,78 @@ PlaceCow:
 	jmp AButtonUnitScreenHandlerDone	
 	
 AButtonUnitScreenHandlerDone:
+	rts
+	
+AButtonBuildScreenHandler:
+	lda menuCursorPos
+	cmp #$01
+	beq PlaceFarm
+	cmp #$00
+	beq UnitMenu
+	
+UnitMenu:
+	lda #$03
+	sta guiMode
+	jsr openTextBox
+	jmp AButtonBuildScreenHandlerDone
+	
+PlaceFarm:
+	; place new farm tile in map
+	lda cursorY 
+	asl a
+	asl a
+	asl a
+	asl a
+	clc
+	adc cursorX
+	tax
+	lda #$03
+	sta MapData, x 
+	
+	; render new farm tile
+	lda cursorX
+	sta param4
+	lda cursorY
+	clc
+	adc #MAP_DRAW_Y
+	sta param5
+	lda #$01
+	sta param6
+	sta param7
+	jsr drawMapChunk
+
+	lda #$01
+	sta guiMode
+	jsr closeCurrentTextBox
+	jsr endTurn
+	
+	jmp AButtonBuildScreenHandlerDone
+	
+AButtonBuildScreenHandlerDone:
+	rts
+	
+AButtonCowScreenHandler:
+	lda menuCursorPos
+	cmp #$00
+	beq AttackCow
+	jmp RemoveCow
+	
+AttackCow:
+	lda #$0a
+	sta guiMode
+	jsr calculateUnitMoves
+	jsr closeCurrentTextBox
+	rts
+	
+RemoveCow:
+	lda unitSelected
+	sta param3
+	lda turn
+	sta param4
+	jsr removeUnit
+	jsr removeUnitAnimationSfxInit
+	
+	lda #$01
+	sta guiMode
+	jsr closeCurrentTextBox
 	rts
