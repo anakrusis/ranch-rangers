@@ -572,6 +572,11 @@ drawMapChunkXLoop:
 	; iterating through each players units and seeing if their coordinates match up with the X/Y iterators.
 	; If so, it loads those metatiles to the buffer and skips the tile rendering.
 	ldx #$00
+	cpx p1UnitCount
+	bne scanP1Pieces
+	jmp scanP2Pieces
+	
+scanP1Pieces:	
 scanP1PiecesLoop:
 	lda p1PiecesX, x
 	cmp param2
@@ -602,8 +607,12 @@ scanP1PiecesLoopTail:
 	bne scanP1PiecesLoop
 	
 	; Now checking PLAYER 2 UNITS:
-	
+scanP2Pieces:	
 	ldx #$00    ; here the x register is used to iterate through all of player 2's units
+	cpx p2UnitCount
+	bne scanP2PiecesLoop
+	jmp scanP2PiecesDone
+	
 scanP2PiecesLoop:
 	lda p2PiecesX, x
 	cmp param2
@@ -632,7 +641,8 @@ scanP2PiecesLoopTail:
 	inx
 	cpx p2UnitCount
 	bne scanP2PiecesLoop
-	
+
+scanP2PiecesDone:	
 	pla
 	tax
 

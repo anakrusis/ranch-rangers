@@ -297,9 +297,6 @@ HarvestTimerUpdate:
 	
 	jsr closeCurrentTextBox
 	
-	lda turn ; This is a contrived way to ensure EvaluateTurn chooses the right turn every time
-	eor #$01 ; it just inverts the bit so that the turn lands on its opposite
-	sta turn
 	jsr evaluateTurn
 	
 	lda #$00
@@ -386,6 +383,9 @@ initGameState:
 	
 	lda #$00
 	sta season ; season is set to spring
+	
+	lda #$01
+	sta turn
 	
 	lda #$04     ; player 1 farmer spawned
 	sta param4

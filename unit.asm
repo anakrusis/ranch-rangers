@@ -78,7 +78,12 @@ moveUnitCheckGrass:
 	jmp moveUnitInvalidInput
 
 moveUnitCheckValidMoves:
+	; zero moves means no input can be valid
 	ldx #$00
+	cpx validMovesCount
+	bne moveUnitCheckValidMovesLoop
+	jmp moveUnitInvalidInput
+	
 moveUnitCheckValidMovesLoop:
 
 	lda validMovesX, x
@@ -289,7 +294,32 @@ mapDecideUnitMoveValid:
 	; either unitSelectedX and param1 must match or unitSelectedY and param2 must match
 	; (both can't match because that would be matching the space of unitSelected and it would consider it friendly fire)
 	; so it has rook-type movement, only can go straight not diagonal
+	lda unitSelectedType
+	cmp #$02
+	bne AtkMoveModeEval
+	
+	lda unitSelectedX
+	cmp param1
+	beq XEqual
 
+	lda unitSelectedY
+	cmp param2
+	beq YEqual
+	jmp MoveInvalid
+	
+XEqual:
+	lda unitSelectedY
+	cmp param2
+	bne AtkMoveModeEval
+	jmp MoveInvalid
+	
+YEqual:
+	lda unitSelectedX
+	cmp param1
+	bne AtkMoveModeEval
+	jmp MoveInvalid
+
+AtkMoveModeEval:
 	; attack mode?
 	lda guiMode
 	cmp #$0a
@@ -339,6 +369,9 @@ checkUnitOnTile:
 		
 	; PLAYER 1 units get checked...
 	ldy #$00
+	cpy p1UnitCount
+	beq scanp2
+	
 ScanP1PiecesLoop:
 	lda p1PiecesX, y
 	cmp param1
@@ -352,8 +385,12 @@ ScanP1PiecesLoopTail:
 	cpy p1UnitCount
 	bne ScanP1PiecesLoop
 	
+scanp2:
 	; PLAYER 2 units get checked...
 	ldy #$00
+	cpy p2UnitCount
+	beq NoUnitFound
+	
 ScanP2PiecesLoop:
 	lda p2PiecesX, y
 	cmp param1
