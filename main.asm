@@ -115,7 +115,12 @@ MAX_METATILE_CHANGES = $02 ; per frame, 8 tiles per frame
 P1_UNITS_START_OFFSET = $04
 P2_UNITS_START_OFFSET = $11
 
-SEASONS_LENGTH_IN_TURNS = $03
+SEASONS_LENGTH_IN_TURNS = $01 ; 3 usually for now
+
+TILE_WATER = $00
+TILE_TREES = $01
+TILE_GRASS = $02
+TILE_FARM = $03
 
 ;----- first 8k bank of PRG-ROM    
     .bank 0
@@ -641,14 +646,36 @@ UnitPrices:
 giveHarvestMoney:
 	; temporarily adding 10 (decimal) to gold every harvest
 	; will be replaced with an evaluation of the farms on each tile
-	lda p1Gold
+	; lda p1Gold
+	; clc
+	; adc #$0a
+	; sta p1Gold
+	; lda p2Gold
+	; clc
+	; adc #$0a
+	; sta p2Gold
+checkFarmTiles:
+	ldx #$c0
+checkFarmTilesLoop:
+	lda MapData, x
+	cmp #TILE_FARM
+	bne checkFarmTilesLoopTail
+	
+	txa
+	and #$0f ; x value of index
+	lsr a
+	lsr a
+	lsr a
+	tay
+	
+	lda p1Gold, y
 	clc
-	adc #$0a
-	sta p1Gold
-	lda p2Gold
-	clc
-	adc #$0a
-	sta p2Gold
+	adc #$01
+	sta p1Gold, y
+ 	
+checkFarmTilesLoopTail:
+	dex
+	bne checkFarmTilesLoop
 	
 	rts
 	

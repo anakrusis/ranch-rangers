@@ -10,7 +10,7 @@ placeUnit:
 
 p1UnitLoad:
 
-	ldx p1UnitCount
+	ldx <p1UnitCount
 	
 	lda param4
 	sta p1PiecesX, x
@@ -21,7 +21,7 @@ p1UnitLoad:
 	lda param6
 	sta p1PiecesType, x
 	
-	inc p1UnitCount
+	inc <p1UnitCount
 
 	lda param6
 	clc
@@ -29,7 +29,7 @@ p1UnitLoad:
 	jmp UnitLoaded
 p2UnitLoad:
 
-	ldx p2UnitCount
+	ldx <p2UnitCount
 	
 	lda param4
 	sta p2PiecesX, x
@@ -40,7 +40,7 @@ p2UnitLoad:
 	lda param6
 	sta p2PiecesType, x
 	
-	inc p2UnitCount
+	inc <p2UnitCount
 
 	lda param6
 	clc 
@@ -58,6 +58,36 @@ UnitLoaded:
 	
 	jsr placeTileInBuffer
 
+	rts
+	
+; same as above with params but checks if you have sufficient funds and does the proper sfx
+buyUnit:
+	ldy param7 ; unit allegiance
+	lda p1Gold, y
+	
+	ldx param6 ; unit type
+	cmp UnitPrices, x
+	bcs buyUnitSuccess
+	
+	lda #$02
+	ldx #$00
+	jsr FamiToneSfxPlay
+	
+	rts
+	
+buyUnitSuccess:
+	; todo animation with sprite? idk
+	jsr placeUnit
+	
+	ldy param7
+	lda p1Gold, y
+	sec
+	sbc UnitPrices, x
+	sta p1Gold, y
+	
+	jsr closeCurrentTextBox
+	jsr endTurn
+	
 	rts
 	
 ; no params, just uses cursorpos and unitSelected
@@ -226,12 +256,12 @@ calcRange:
 	tay
 calcMovesYLoop:
 
-	sty param2
+	sty <param2
 
 	; ditto
-	lda unitSelectedX
+	lda <unitSelectedX
 	sec
-	sbc param8
+	sbc <param8
 	tax
 calcMovesXLoop:
 	
@@ -241,13 +271,13 @@ calcMovesXLoop:
 	pha
 	
 calcMovesCheckTerrain:
-	lda param2
+	lda <param2
 	asl a       
 	asl a      
 	asl a
 	asl a
 	clc
-	adc param1
+	adc <param1
 	tay
 	lda MapData, y
 	cmp #$02
@@ -263,9 +293,9 @@ calcMovesCheckUnit:
 	
 	; if so, place a new move into the valid moves list at the proper index
 	ldy validMovesCount
-	lda param1
+	lda <param1
 	sta validMovesX, y
-	lda param2
+	lda <param2
 	sta validMovesY, y
 	
 	inc validMovesCount	
@@ -275,12 +305,12 @@ calcMovesXLoopTail:
 	tay
 
 	inx
-	cpx param6
+	cpx <param6
 	bne calcMovesXLoop
 
 calcMovesYLoopTail:
 	iny
-	cpy param7
+	cpy <param7
 	bne calcMovesYLoop
 
 calcMovesDone:
@@ -369,60 +399,60 @@ checkUnitOnTile:
 		
 	; PLAYER 1 units get checked...
 	ldy #$00
-	cpy p1UnitCount
+	cpy <p1UnitCount
 	beq scanp2
 	
 ScanP1PiecesLoop:
 	lda p1PiecesX, y
-	cmp param1
+	cmp <param1
 	bne ScanP1PiecesLoopTail
 	lda p1PiecesY, y
-	cmp param2
+	cmp <param2
 	bne ScanP1PiecesLoopTail	
 	jmp P1UnitFound
 ScanP1PiecesLoopTail:
 	iny
-	cpy p1UnitCount
+	cpy <p1UnitCount
 	bne ScanP1PiecesLoop
 	
 scanp2:
 	; PLAYER 2 units get checked...
 	ldy #$00
-	cpy p2UnitCount
+	cpy <p2UnitCount
 	beq NoUnitFound
 	
 ScanP2PiecesLoop:
 	lda p2PiecesX, y
-	cmp param1
+	cmp <param1
 	bne ScanP2PiecesLoopTail
 	lda p2PiecesY, y
-	cmp param2
+	cmp <param2
 	bne ScanP2PiecesLoopTail
 	jmp P2UnitFound
 ScanP2PiecesLoopTail:
 	iny
-	cpy p2UnitCount
+	cpy <p2UnitCount
 	bne ScanP2PiecesLoop
 		
 NoUnitFound:
 	lda #$ff
-	sta param3
+	sta <param3
 	rts
 	
 P1UnitFound:
-	sty param3
+	sty <param3
 	lda #$00
-	sta param4
+	sta <param4
 	lda p1PiecesType, y
-	sta param5
+	sta <param5
 	rts
 
 P2UnitFound:
-	sty param3
+	sty <param3
 	lda #$01
-	sta param4
+	sta <param4
 	lda p2PiecesType, y
-	sta param5
+	sta <param5
 	rts
 	
 ; param1 param2: x1, y1
@@ -520,11 +550,11 @@ removeP1UnitLoop:
 	sta p1PiecesType, y ; write type to the unit below
 	iny
 	
-	cpy p1UnitCount
+	cpy <p1UnitCount
 	bne removeP1UnitLoop
 
 removeP1UnitDone:
-	dec p1UnitCount
+	dec <p1UnitCount
 	jsr drawMapChunk
 	
 	rts
@@ -561,11 +591,11 @@ removeP2UnitLoop:
 	sta p2PiecesType, y ; write type to the unit below
 	iny
 	
-	cpy p2UnitCount
+	cpy <p2UnitCount
 	bne removeP2UnitLoop
 
 removeP2UnitDone:
-	dec p2UnitCount
+	dec <p2UnitCount
 	jsr drawMapChunk
 	
 	rts
@@ -595,6 +625,8 @@ removeUnitAnimationSfxInit:
 	lda #$05
 	ldx #$00
 	jsr FamiToneSfxPlay
+	
+	jsr updateHotbar
 	
 	rts
 

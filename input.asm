@@ -466,12 +466,7 @@ PlaceChicken:
 	sta param6
 	lda turn
 	sta param7
-	jsr placeUnit
-	
-	lda #$02
-	sta guiMode
-	jsr closeCurrentTextBox
-	jsr endTurn
+	jsr buyUnit
 	
 	jmp AButtonUnitScreenHandlerDone
 	
@@ -484,12 +479,7 @@ PlaceCow:
 	sta param6
 	lda turn
 	sta param7
-	jsr placeUnit
-	
-	lda #$02
-	sta guiMode
-	jsr closeCurrentTextBox
-	jsr endTurn
+	jsr buyUnit
 	
 	jmp AButtonUnitScreenHandlerDone	
 	

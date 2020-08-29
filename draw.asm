@@ -556,14 +556,14 @@ drawStringDone:
 ; param3 temporarily used as the sum of the y+plus height
 drawMapChunk:
 
-	ldy param5
+	ldy <param5
 drawMapChunkYLoop:
 
-	ldx param4
+	ldx <param4
 drawMapChunkXLoop:
 	
-	stx param2
-	sty param3
+	stx <param2
+	sty <param3
 	
 	txa ; the following subroutines clobber x
 	pha
@@ -572,26 +572,26 @@ drawMapChunkXLoop:
 	; iterating through each players units and seeing if their coordinates match up with the X/Y iterators.
 	; If so, it loads those metatiles to the buffer and skips the tile rendering.
 	ldx #$00
-	cpx p1UnitCount
+	cpx <p1UnitCount
 	bne scanP1Pieces
 	jmp scanP2Pieces
 	
 scanP1Pieces:	
 scanP1PiecesLoop:
 	lda p1PiecesX, x
-	cmp param2
+	cmp <param2
 	bne scanP1PiecesLoopTail
 	
 	lda p1PiecesY, x
 	clc
 	adc #MAP_DRAW_Y
-	cmp param3
+	cmp <param3
 	bne scanP1PiecesLoopTail
 	
 	lda p1PiecesType, x           ; if both the X and Y coordinates match, then add the unit to the buffer
 	clc 
 	adc #P1_UNITS_START_OFFSET
-	sta param1
+	sta <param1
 	; param2 and param3 are already set up and good to go
 	
 	jsr placeTileInBuffer
@@ -609,25 +609,25 @@ scanP1PiecesLoopTail:
 	; Now checking PLAYER 2 UNITS:
 scanP2Pieces:	
 	ldx #$00    ; here the x register is used to iterate through all of player 2's units
-	cpx p2UnitCount
+	cpx <p2UnitCount
 	bne scanP2PiecesLoop
 	jmp scanP2PiecesDone
 	
 scanP2PiecesLoop:
 	lda p2PiecesX, x
-	cmp param2
+	cmp <param2
 	bne scanP2PiecesLoopTail
 	
 	lda p2PiecesY, x
 	clc
 	adc #MAP_DRAW_Y
-	cmp param3
+	cmp <param3
 	bne scanP2PiecesLoopTail
 	
 	lda p2PiecesType, x           ; if both the X and Y coordinates match, then add the unit to the buffer
 	clc 
 	adc #P2_UNITS_START_OFFSET
-	sta param1
+	sta <param1
 	; param2 and param3 are already set up and good to go
 	
 	jsr placeTileInBuffer
@@ -639,7 +639,7 @@ scanP2PiecesLoop:
 	
 scanP2PiecesLoopTail:
 	inx
-	cpx p2UnitCount
+	cpx <p2UnitCount
 	bne scanP2PiecesLoop
 
 scanP2PiecesDone:	
@@ -656,28 +656,30 @@ drawTileNoUnit:
 	asl a
 	asl a
 	asl a 
-	stx param2
+	stx <param2
 	clc
-	adc param2 ; mapdata index = (y*16)+x
-	sta param2 ; param2 stores the mapdata index temporarily
+	adc <param2 ; mapdata index = (y*16)+x
+	sta <param2 ; param2 stores the mapdata index temporarily
 	
 	txa ; frees x to be used for indexing the mapdata
 	pha
 	
-	ldx param2
+	ldx <param2
 	lda MapData, x ; now A has the tile value, which is now given to param1
-	cmp #$02
+	
+	; grass is handled uniquely when drawing tiles
+	cmp #TILE_GRASS
 	bne NonGrassDraw
 	jsr HandleGrassDraw
 	
 NonGrassDraw:
-	sta param1
+	sta <param1
 	
 	pla ; x is back in business
 	tax
 
-	stx param2 ; param2 holds the x position and param3 holds the y position
-	sty param3
+	stx <param2 ; param2 holds the x position and param3 holds the y position
+	sty <param3
 	
 	txa ; (x is clobbered by the following subroutine)
 	pha
@@ -690,24 +692,24 @@ NonGrassDraw:
 	
 drawMapChunkXLoopTail: ; here the temp variables in param2&3 are generated to determine whether the rectangle has been fully achieved.
 	
-	lda param4 ; param2 = (x + width)
+	lda <param4 ; param2 = (x + width)
 	clc
-	adc param6
-	sta param2
+	adc <param6
+	sta <param2
 	
 	inx
-	cpx param2
+	cpx <param2
 	beq drawMapRowDone
 	jmp drawMapChunkXLoop
 
 drawMapRowDone:
-	lda param5 ; param3 = (y + height)
+	lda <param5 ; param3 = (y + height)
 	clc
-	adc param7
-	sta param3
+	adc <param7
+	sta <param3
 
 	iny
-	cpy param3
+	cpy <param3
 	beq drawMapChunkDone
 	jmp drawMapChunkYLoop
 
@@ -1081,16 +1083,15 @@ bcdKillCount:
 	lda #$14
 	sta stringBuffer+19 ; "k"	
 
-bcdDeathCount:
-	lda p1Deaths, y
-	sta Hex0
-	jsr HexToDecimal.8
-	
-	lda DecTens
+bcdUnitCount:
+	lda #$2f
+	sta stringBuffer+22
+	ldy turn
+	lda p1UnitCount,y
 	sta stringBuffer+23
-	lda DecOnes
+	lda #$27
 	sta stringBuffer+24
-	lda #$0d
-	sta stringBuffer+25 ; "d"
+	lda #$08
+	sta stringBuffer+25
 	
 	rts
