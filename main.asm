@@ -52,6 +52,8 @@ buttons2 .rs 1
 prevButtons1 .rs 1
 prevButtons2 .rs 1
 
+seed .rs 2
+
 	.rsset $0100 ; Try not to add too much, or else you might risk hitting the stack
 turnAnimTimer .rs 1
 harvestAnimTimer .rs 1
@@ -362,15 +364,6 @@ initCursorSprite:
 	cpx #$10
 	bne initCursorSprite
 	
-	; random map generation code here TODO
-	
-	ldx #$c0
-CopyMapLoop:
-	lda testMap, x
-	sta MapData, x
-	dex
-	bne CopyMapLoop
-	
 EndInit:
 	jsr initGlobal
 	jsr initDebugMenu
@@ -419,7 +412,8 @@ initGameState:
 	sta $2000
 	lda #%00000110 ; background and sprites disabled
 	sta $2001
-	
+
+	jsr GenerateMap
 	jsr drawMap
 	
 	lda #$90 ; nmi enabled
@@ -444,7 +438,7 @@ initGameState:
 	sta param7
 	jsr placeUnit
 	
-	lda #$0d    ; player 2 farmer spawned
+	lda #$0b    ; player 2 farmer spawned
 	sta param4
 	lda #$06
 	sta param5
@@ -624,6 +618,7 @@ p2EndTurn:
 	
 	rts
 	
+	.include "map.asm"
 	.include "unit.asm"
 	.include "draw.asm"
 	.include "input.asm"
@@ -707,21 +702,6 @@ MetaTileAttributes:
 	.db $ff, $ff, $ff, $ff ; player 2 tiles
 	.db $aa, $ff ; border tiles
 	
-testMap:
-	;.db %01100110, %00100110, %01100110, %00100110
-	.db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
-	.db $00, $00, $00, $02, $02, $00, $00, $00, $02, $00, $00, $00, $00, $00, $00, $00
-	.db $00, $00, $02, $02, $02, $02, $02, $02, $02, $02, $02, $00, $00, $00, $00, $00
-	.db $00, $00, $02, $02, $02, $02, $01, $02, $02, $02, $02, $02, $02, $00, $00, $00
-	.db $00, $02, $02, $02, $02, $02, $02, $01, $02, $02, $02, $02, $02, $02, $00, $00
-	.db $00, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $00
-	.db $00, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $02, $00
-	.db $00, $00, $02, $02, $02, $02, $02, $02, $02, $02, $01, $02, $02, $02, $02, $00
-	.db $00, $00, $02, $02, $02, $02, $02, $02, $02, $02, $01, $01, $02, $00, $00, $00
-	.db $00, $00, $00, $02, $02, $02, $02, $02, $00, $00, $02, $02, $00, $00, $00, $00
-	.db $00, $00, $00, $00, $02, $02, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
-	.db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
-	
 CursorSpriteData:
 	.db $00, $80, %00000011, $00
 	.db $00, $80, %01000011, $08  
@@ -766,7 +746,7 @@ text_TheLicc:
 	.db $1d, $31, $2e, $24, $15, $32, $2c, $2c, $ff ; "THE LICC"
 	
 text_EngineTitle:	
-	.db $1b, $1b, $28, $08, $27, $02, $06, $27, $02, $00, $02, $00, $ff ; rr.8/26/2020
+	.db $1b, $1b, $28, $08, $27, $02, $09, $27, $02, $00, $02, $00, $ff ; rr.8/29/2020
 	
 text_Icle:
 	.db $12, $0c, $15, $0e, $ff ; icle
