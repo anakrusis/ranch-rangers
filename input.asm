@@ -18,17 +18,19 @@ InputB:
 InputBGuimodeCheck:
 	lda guiMode
 	cmp #$01
-	beq InputBTurnChangeScreen ; does nothing
+	beq InputBDoNothing ; does nothing
 	cmp #$03
 	beq InputBUnitScreen
 	cmp #$07
-	beq InputBTurnChangeScreen
+	beq InputBDoNothing
 	cmp #$08
-	beq InputBTurnChangeScreen
+	beq InputBDoNothing
 	cmp #$0c
-	beq InputBTurnChangeScreen
+	beq InputBDoNothing
 	cmp #$10
-	beq InputBTurnChangeScreen
+	beq InputBDoNothing
+	cmp #$11
+	beq InputBDoNothing
 	
 	; If unsure what to do then just go back to the main guimode, that's B button default behavior
 	lda #$01
@@ -49,8 +51,8 @@ InputBUnitScreen:
 	jsr openTextBox
 	jmp InputBDone
 	
-	; Turn change screen does nothing, you can't skip it
-InputBTurnChangeScreen:
+	; does nothing, screens you can't skip
+InputBDoNothing:
 	jmp InputBDone
 
 InputBDone:
@@ -145,6 +147,8 @@ InputACowScreen:
 	
 InputAFarmerScreen:
 MoveFarmer:
+	lda #$00
+	sta attackMode
 	lda #$09
 	sta guiMode
 	jsr calculateUnitMoves
@@ -162,6 +166,8 @@ InputAChickenScreen:
 	jmp InputADone
 
 MoveChicken:
+	lda #$00
+	sta attackMode
 	lda #$09
 	sta guiMode
 	jsr calculateUnitMoves
@@ -169,6 +175,8 @@ MoveChicken:
 	jmp InputADone
 	
 AttackChicken:
+	lda #$01
+	sta attackMode
 	lda #$0a
 	sta guiMode
 	jsr calculateUnitMoves
@@ -176,10 +184,10 @@ AttackChicken:
 	jmp InputADone
 
 DeleteChicken:
-	lda unitSelected
-	sta param3
-	lda turn
-	sta param4
+	lda <unitSelected
+	sta <param3
+	lda <turn
+	sta <param4
 	jsr removeUnit
 	jsr removeUnitAnimationSfxInit
 	
@@ -331,19 +339,19 @@ InputHandlerDone:
 	
 AButtonMainScreenHandler:
 
-	lda cursorX
-	sta param1
-	lda cursorY
-	sta param2
+	lda <cursorX
+	sta <param1
+	lda <cursorY
+	sta <param2
 	; is a unit present on the space?
 	jsr checkUnitOnTile
-	lda param3
+	lda <param3
 	cmp #$ff
 	beq AButtonMainScreenNoUnit
 	
 	; is it friendly or enemy unit? Can't open up menu on enemy units.
-	lda param4
-	cmp turn
+	lda <param4
+	cmp <turn
 	bne AButtonMainScreenInvalidInput
 	jmp AButtonMainScreenHasUnit
 	
@@ -353,7 +361,7 @@ AButtonMainScreenNoUnit:
 
 	; first, you can only place tiles or units within your borders
 	; (you can interact with units of yours outside your borders but you have to spawn them in your border)
-	lda cursorX
+	lda <cursorX
 	lsr a
 	lsr a
 	lsr a
@@ -464,21 +472,21 @@ PlaceChicken:
 	sta param5
 	lda #$01
 	sta param6
-	lda turn
+	lda <turn
 	sta param7
 	jsr buyUnit
 	
 	jmp AButtonUnitScreenHandlerDone
 	
 PlaceCow:
-	lda cursorX
-	sta param4
-	lda cursorY
-	sta param5
+	lda <cursorX
+	sta <param4
+	lda <cursorY
+	sta <param5
 	lda #$02
-	sta param6
-	lda turn
-	sta param7
+	sta <param6
+	lda <turn
+	sta <param7
 	jsr buyUnit
 	
 	jmp AButtonUnitScreenHandlerDone	
@@ -500,32 +508,38 @@ UnitMenu:
 	jmp AButtonBuildScreenHandlerDone
 	
 PlaceFarm:
+	ldy <turn
+	lda p1FarmCount, y
+	clc
+	adc #$01
+	sta p1FarmCount, y
+	
 	; place new farm tile in map
-	lda cursorY 
+	lda <cursorY 
 	asl a
 	asl a
 	asl a
 	asl a
 	clc
-	adc cursorX
+	adc <cursorX
 	tax
 	lda #$03
 	sta MapData, x 
 	
 	; render new farm tile
-	lda cursorX
-	sta param4
-	lda cursorY
+	lda <cursorX
+	sta <param4
+	lda <cursorY
 	clc
 	adc #MAP_DRAW_Y
-	sta param5
+	sta <param5
 	lda #$01
-	sta param6
-	sta param7
+	sta <param6
+	sta <param7
 	jsr drawMapChunk
 
 	lda #$01
-	sta guiMode
+	sta <guiMode
 	jsr closeCurrentTextBox
 	jsr endTurn
 	
@@ -541,6 +555,8 @@ AButtonCowScreenHandler:
 	jmp RemoveCow
 	
 AttackCow:
+	lda #$01 
+	sta attackMode
 	lda #$0a
 	sta guiMode
 	jsr calculateUnitMoves

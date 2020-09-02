@@ -86,6 +86,10 @@ buyUnitSuccess:
 	sta p1Gold, y
 	
 	jsr closeCurrentTextBox
+	lda #$02
+	sta guiMode
+	jsr openTextBox
+	jsr closeCurrentTextBox
 	jsr endTurn
 	
 	rts
@@ -226,9 +230,7 @@ calcRange:
 	asl a
 	sta param8
 
-	lda guiMode ; such that 0a(attack) becomes 01 and 09(move) becomes 00
-	sec
-	sbc #$09 
+	lda attackMode ; attack is 01, move is 00
 	clc
 	adc param8
 	tay

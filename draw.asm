@@ -393,9 +393,9 @@ drawTextBoxYLoop:
 drawTextBoxXLoop:
 
 	jsr loadTextboxTileToA
-	sta param1 ; param1 holds the tiletype for now, which was previously loaded into A
-	stx param2 ; param2 holds the x position for a little while, since X is occupied
-	sty param3
+	sta <param1 ; param1 holds the tiletype for now, which was previously loaded into A
+	stx <param2 ; param2 holds the x position for a little while, since X is occupied
+	sty <param3
 	
 	;sta param1 ; these lines uncommented would produce a bulk drawing result.
 	;stx param2 ; maybe in the future there can be an additional parameter to switch between
@@ -410,66 +410,66 @@ drawTextBoxXLoop:
 	pla ; the old x returns
 	tax
 	
-	lda param4 ; param2 = (x + width)
+	lda <param4 ; param2 = (x + width)
 	clc
-	adc param6
-	sta param2
+	adc <param6
+	sta <param2
 	
 	inx
-	cpx param2
+	cpx <param2
 	bne drawTextBoxXLoop
 
-	lda param5 ; param3 = (y + height)
+	lda <param5 ; param3 = (y + height)
 	clc
-	adc param7
-	sta param3
+	adc <param7
+	sta <param3
 
 	iny
-	cpy param3
+	cpy <param3
 	bne drawTextBoxYLoop
 	
 	rts
 	
 loadTextboxTileToA:
-	lda param4 ; param2 = (x + width)
+	lda <param4 ; param2 = (x + width)
 	clc
-	adc param6
-	sta param2
-	lda param5 ; param3 = (y + height)
+	adc <param6
+	sta <param2
+	lda <param5 ; param3 = (y + height)
 	clc
-	adc param7
-	sta param3
+	adc <param7
+	sta <param3
 
 checkX:
-	cpx param4
+	cpx <param4
 	bne checkXSummed
 	
 	lda #$08
-	cpy param5
+	cpy <param5
 	beq textBoxTileLoaded
 	
 	lda #$0e
-	dec param3
-	cpy param3
+	dec <param3
+	cpy <param3
 	beq textBoxTileLoaded
 	
 	lda #$0b
 	jmp textBoxTileLoaded
 	
 checkXSummed:
-	dec param2 ; its evaluating (width+x)-1
-	lda param2
+	dec <param2 ; its evaluating (width+x)-1
+	lda <param2
 
-	cpx param2
+	cpx <param2
 	bne checkXOther
 	
 	lda #$0a
-	cpy param5
+	cpy <param5
 	beq textBoxTileLoaded
 	
 	lda #$10
-	dec param3
-	cpy param3
+	dec <param3
+	cpy <param3
 	beq textBoxTileLoaded
 	
 	lda #$0d
@@ -477,12 +477,12 @@ checkXSummed:
 	
 checkXOther:
 	lda #$09
-	cpy param5
+	cpy <param5
 	beq textBoxTileLoaded
 	
 	lda #$0f
-	dec param3
-	cpy param3
+	dec <param3
+	cpy <param3
 	beq textBoxTileLoaded
 	
 	lda #$0c
@@ -865,6 +865,8 @@ drawCursorDone:
 	beq drawValidMoveIndicators
 	cmp #$0a
 	beq drawValidMoveIndicators
+	cmp #$11
+	beq drawValidMoveIndicators
 	jmp drawValidMoveIndicatorsDone
 
 drawValidMoveIndicators:
@@ -980,13 +982,13 @@ placeTileInBuffer:
 	asl a
 	asl a
 	tax 
-	lda param1
+	lda <param1
 	sta tileBuffer, x ; tiletype stored in param1 for now
 	inx
-	lda param2
+	lda <param2
 	sta tileBuffer, x ; x value stored in param2 for now 
 	inx
-	lda param3
+	lda <param3
 	sta tileBuffer, x ; y value directly stored in Y
 	
 	inc tileBufferLength
@@ -1071,17 +1073,17 @@ bcdGoldDisplay:
 	lda #$10
 	sta stringBuffer+13 ; "g"
 	
-bcdKillCount:
-	lda p1Kills, y
+bcdFarmCount:
+	lda p1FarmCount, y
 	sta Hex0
 	jsr HexToDecimal.8
 	
-	lda DecTens
+	lda #$42 ; farm symbol
 	sta stringBuffer+17
-	lda DecOnes
+	lda DecTens
 	sta stringBuffer+18
-	lda #$14
-	sta stringBuffer+19 ; "k"	
+	lda DecOnes
+	sta stringBuffer+19
 
 bcdUnitCount:
 	lda #$2f

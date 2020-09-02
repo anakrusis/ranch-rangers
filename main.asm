@@ -52,6 +52,8 @@ buttons2 .rs 1
 prevButtons1 .rs 1
 prevButtons2 .rs 1
 
+attackMode .rs 1 ; 1 when attacking, 0 when not attacking
+
 seed .rs 2
 
 	.rsset $0100 ; Try not to add too much, or else you might risk hitting the stack
@@ -63,6 +65,8 @@ seasonPaletteChangeFlag .rs 1
 unitHeavenXpos  .rs 1 ; for the animation when a unit deads
 unitHeavenType  .rs 1
 unitHeavenTimer .rs 1
+computerMustMakeMove .rs 1
+endTurnTimer .rs 1
 
 ;FULL RESERVED FOR MAP AND UNIT DATA
 	.rsset $0400 ; Hey 400 page is full, dont add anything more here
@@ -83,6 +87,8 @@ p1Kills .rs 1
 p2Kills .rs 1
 p1Deaths .rs 1
 p2Deaths .rs 1
+p1FarmCount .rs 1
+p2FarmCount .rs 1
 
 Hex0 .rs 1
 DecOnes .rs 1
@@ -264,12 +270,12 @@ TurnScreenTimer:
 	; Little timing based code for the turn indicator
 	lda guiMode
 	cmp #$07
-	beq TurnScreenClear
+	beq TurnScreenHandler
 	cmp #$08
-	beq TurnScreenClear
+	beq TurnScreenHandler
 	jmp TurnScreenTimerDone
 	
-TurnScreenClear:
+TurnScreenHandler:
 	
 	dec turnAnimTimer
 
@@ -277,24 +283,37 @@ TurnScreenClear:
 	cmp #$00
 	bne TurnScreenTimerDone
 	
+TurnScreenHandlerClear:
+	lda #$01
+	cmp computerMustMakeMove
+	beq TurnScreenHandlerComputerPlayer
+	
+TurnScreenHandlerHumanPlayer:
 	lda #$01
 	sta guiMode
+	jmp TurnScreenHandlerUpdateScreen
+
+TurnScreenHandlerComputerPlayer:
+	lda #$11
+	sta guiMode
+	jsr AiUpdate
 	
+TurnScreenHandlerUpdateScreen:
 	lda #$01
 	sta seasonPaletteChangeFlag
 	
 	jsr closeCurrentTextBox
 	jsr updateHotbar
 	
-	lda #$03   ; A center chunk of the screen gets refreshed at this time because of a GUI issue with opening multiple windows
-	sta param4
-	lda #$06
-	sta param5
-	lda #$05
-	sta param6
-	lda #$03
-	sta param7
-	jsr drawMapChunk
+	; lda #$03   ; A center chunk of the screen gets refreshed at this time because of a GUI issue with opening multiple windows
+	; sta param4
+	; lda #$08
+	; sta param5
+	; lda #$05
+	; sta param6
+	; lda #$01
+	; sta param7
+	; jsr drawMapChunk
 
 TurnScreenTimerDone:
 HarvestScreenTimer:
@@ -316,6 +335,24 @@ HarvestTimerUpdate:
 	jsr FamiToneMusicPlay
 	
 HarvestScreenTimerDone:
+
+EndTurnTimerUpdate:
+	lda endTurnTimer
+	cmp #$00
+	beq EndTurnTimerTrigger
+	cmp #$ff
+	beq EndTurnTimerDone
+	
+	dec endTurnTimer
+	jmp EndTurnTimerDone
+	
+EndTurnTimerTrigger:
+	lda #$ff
+	sta endTurnTimer
+	jsr endTurnTimerFinished
+	
+EndTurnTimerDone:
+
 SetColorBars:
 	lda #%00111110
 	sta $2001
@@ -324,7 +361,7 @@ SetColorBars:
 	
 	lda #%00011110
 	sta $2001	
-	
+
 	jsr FamiToneUpdate
 	inc globalTick
 	
@@ -383,6 +420,9 @@ forever:
     jmp forever
 	
 initGlobal:
+	lda #$ff
+	sta endTurnTimer
+	
 	; these have to be set or else the GUI glitches when trying to close a nonexistent gui lol
 	sta activeGuiWidth
 	sta activeGuiHeight
@@ -413,6 +453,9 @@ initDebugMenu:
 	rts
 	
 initGameState:
+	lda #$ff
+	sta endTurnTimer
+
 	lda #$10 ; nmi disabled
 	sta $2000
 	lda #%00000110 ; background and sprites disabled
@@ -455,6 +498,8 @@ initGameState:
 	
 	lda #$00
 	jsr FamiToneMusicPlay
+	
+	jsr giveStartingMoney
 	
 	jsr checkIfHarvestTime
 	
@@ -556,10 +601,31 @@ player2TurnStart:
 	sta guiMode
 	jsr openTextBox
 	
+	lda #$00
+	cmp gameMode
+	bne player2TurnStartDone
+	
+	lda #$01
+	sta computerMustMakeMove
+	
+player2TurnStartDone:
 	rts
 	
+; sets up for the animation of the unit moving, or whatever goes on this turn
 endTurn:
+	lda #$80
+	sta endTurnTimer
 
+	lda turn
+	eor #$01
+	clc
+	adc #$07 ; 7 = player1 turn, 8 = player2 turn
+			 ; this gets overwritten anyways lol, but it is there
+	sta guiMode
+	
+	rts
+
+endTurnTimerFinished:
 	; TODO check if either team has no units and issue the game over
 
 	inc turnCount
@@ -623,6 +689,7 @@ p2EndTurn:
 	
 	rts
 	
+	.include "ai.asm"
 	.include "map.asm"
 	.include "unit.asm"
 	.include "draw.asm"
@@ -643,39 +710,29 @@ CowRange:
 UnitPrices:
 	.db $00, $02, $02
 	
+giveStartingMoney:
+	lda gameMode
+	cmp #$80
+	bne giveStartingMoneyDone
+	
+	lda #99
+	sta p1Gold
+	sta p2Gold
+	
+giveStartingMoneyDone:
+	rts
+	
 giveHarvestMoney:
-	; temporarily adding 10 (decimal) to gold every harvest
-	; will be replaced with an evaluation of the farms on each tile
-	; lda p1Gold
-	; clc
-	; adc #$0a
-	; sta p1Gold
-	; lda p2Gold
-	; clc
-	; adc #$0a
-	; sta p2Gold
-checkFarmTiles:
-	ldx #$c0
-checkFarmTilesLoop:
-	lda MapData, x
-	cmp #TILE_FARM
-	bne checkFarmTilesLoopTail
-	
-	txa
-	and #$0f ; x value of index
-	lsr a
-	lsr a
-	lsr a
-	tay
-	
-	lda p1Gold, y
+	; Every farm gives 1 gold on harvest!
+	lda p1Gold
 	clc
-	adc #$01
-	sta p1Gold, y
- 	
-checkFarmTilesLoopTail:
-	dex
-	bne checkFarmTilesLoop
+	adc p1FarmCount
+	sta p1Gold
+	
+	lda p2Gold
+	clc
+	adc p2FarmCount
+	sta p2Gold
 	
 	rts
 	
@@ -819,16 +876,16 @@ text_DebugMenu:
 	.db $16, $0e, $17, $1e, $fe, $0d, $0e, $0b, $1e, $10, $24, $16, $18, $0d, $0e, $fe, $17, $18, $1b, $16, $0a, $15, $ff
 	
 GuiX:
-	;     0    1    2    3    4    5    6    7    8    9    a    b    c    d    e    f   10
-	.db $01, $01, $03, $08, $05, $05, $05, $03, $03, $01, $01, $01, $05, $01, $01, $01, $06
+	;     0    1    2    3    4    5    6    7    8    9    a    b    c    d    e    f   10   11
+	.db $01, $01, $03, $08, $05, $05, $05, $03, $03, $01, $01, $01, $05, $01, $01, $01, $06, $01
 GuiY:
-	.db $01, $01, $06, $06, $06, $06, $06, $06, $06, $01, $01, $01, $06, $01, $01, $01, $06
+	.db $01, $01, $06, $06, $06, $06, $06, $06, $06, $01, $01, $01, $06, $01, $01, $01, $06, $01
 GuiWidths:
-	.db $01, $01, $05, $07, $05, $05, $05, $0a, $0a, $01, $01, $01, $06, $01, $01, $01, $07
+	.db $01, $01, $05, $07, $05, $05, $05, $0a, $0a, $01, $01, $01, $06, $01, $01, $01, $07, $01
 GuiHeights:
-	.db $01, $01, $03, $03, $02, $04, $03, $02, $02, $01, $01, $01, $02, $01, $01, $01, $06
+	.db $01, $01, $03, $03, $02, $04, $03, $02, $02, $01, $01, $01, $02, $01, $01, $01, $06, $01
 GuiMenuSizes:
-	.db $00, $00, $02, $02, $01, $03, $02, $00, $00, $00, $00, $00, $00, $01, $01, $01, $02
+	.db $00, $00, $02, $02, $01, $03, $02, $00, $00, $00, $00, $00, $00, $01, $01, $01, $02, $00
 	
 GuiPointerLow:
 	.db $00, LOW(text_EngineTitle), LOW(text_BuildMenu), LOW(text_UnitMenu), LOW(text_FarmerMenu), LOW(text_ChickenMenu), LOW(text_CowMenu), LOW(text_Player1Turn), LOW(text_Player2Turn), $00, $00, $00, LOW(text_Harvest), $00, $00, $00, LOW(text_DebugMenu)
