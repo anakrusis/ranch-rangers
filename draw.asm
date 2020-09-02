@@ -800,14 +800,38 @@ drawMapCursor:
 	lda #$80 ; the rectangly icon tile
 	sta $0201
 	
-	lda #%00000011 ; all that flippy stuff lol
-	sta $0202
-	lda #%01000011
-	sta $0206
-	lda #%10000011
-	sta $020a
-	lda #%11000011
-	sta $020e
+	; lda #%00000011 ; all that flippy stuff lol
+	; sta $0202
+	; lda #%01000011
+	; sta $0206
+	; lda #%10000011
+	; sta $020a
+	; lda #%11000011
+	; sta $020e
+	
+	ldx #$00
+drawCursorAttributeLoop:
+	txa
+	asl a
+	asl a
+	tay ; y = x*4
+	
+	txa
+	ror a
+	ror a
+	ror a
+	sta param1
+	
+	lda globalTick
+	lsr a
+	and #$03
+	ora param1
+	
+	sta $0202, y
+	
+	inx
+	cpx #$04
+	bne drawCursorAttributeLoop
 	
 	jmp drawCursorDone
 	
@@ -855,6 +879,8 @@ drawMenuCursor:
 	
 	lda #$81 ; cursor icon
 	sta $0201
+	lda #$00
+	sta $0202
 	
 drawCursorDone:
 	
@@ -919,6 +945,13 @@ drawIndicator:
 	
 	ldy param1
 	sta $0201, y
+	
+	; colors swapping
+	lda globalTick
+	lsr a
+	;lsr a
+	and #$03
+	sta $0202, y
 
 validMoveIndicatorLoopTail:	
 	inx
@@ -962,6 +995,10 @@ drawHeavenSpriteLoop:
 	tax
 	lda MetaSprites, x
 	sta $0201, y
+	
+	; color and flipping (none)
+	lda #$00
+	sta $0202, y
 	
 	ldx param1
 
