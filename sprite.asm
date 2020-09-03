@@ -58,6 +58,9 @@ drawMapCursor:
 	and #$03
 	sta <param4
 	
+	lda #$01
+	sta <param6
+	
 	jsr drawMetasprite
 	
 drawMapCursorDone:
@@ -190,12 +193,35 @@ drawHeavenSprite:
 	; color and flipping (none)
 	lda #$00
 	sta <param4
+	lda #$00
+	sta <param6
 	
 	jsr drawMetasprite
 
 	dec unitHeavenTimer
 
 drawHeavenSpriteDone:
+	lda endTurnTimer
+	cmp #$ff
+	bne drawTurnAnim
+	jmp drawTurnAnimDone
+
+drawTurnAnim:
+	lda moveAnimX
+	sta <param2
+	lda moveAnimY
+	sta <param3
+	
+	lda #$00
+	sta <param4
+	lda #$05
+	sta <param5
+	lda #$00
+	sta <param6
+
+	jsr drawMetasprite
+	
+drawTurnAnimDone:
 drawSpritesDone:
 	rts
 	
@@ -220,9 +246,10 @@ drawSprite:
 	inc <spriteDrawCount
 	rts
 	
-;param5 metasprite
-;param2/3 X and Y position
+; param5 metasprite
+; param2/3 X and Y position
 ; param4 color attribute
+; param6 hflip (00 for none and 01 for enabled)
 drawMetasprite:
 	ldx #$00
 drawMetaSpriteLoop:
@@ -233,6 +260,7 @@ drawMetaSpriteLoop:
 	asl a
 	clc
 	adc <param9
+	eor <param6 ; when param6=$01, it flips sprite indices so that 0 1 becomes 1 0 and 2 3 becomes 3 2
 	tay
 	
 	lda MetaSprites, y
@@ -249,6 +277,13 @@ drawMetaSpriteLoop:
 	clc
 	adc MetaSpriteY, x
 	sta <param3
+	
+	lda <param6 ; horizontal flip set if not already in param4
+	ror a
+	ror a
+	ror a
+	ora <param4
+	sta <param4
 	
 	jsr drawSprite
 	

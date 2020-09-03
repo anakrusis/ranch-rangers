@@ -199,13 +199,27 @@ moveUnitDrawUpdate:
 	sta param7
 	jsr drawMapChunk
 	
-	lda cursorX     ; ditto now at the site of the new unit place
-	sta param4
-	lda cursorY
-	clc
-	adc #MAP_DRAW_Y
-	sta param5
-	jsr drawMapChunk
+	; now the sprite update setting its initial position to the old position set in param4/5
+	lda param4
+	asl a
+	asl a
+	asl a
+	asl a
+	sta moveAnimX
+	lda param5
+	asl a
+	asl a
+	asl a
+	asl a
+	sta moveAnimY
+	
+	; lda cursorX     ; ditto now at the site of the new unit place
+	; sta param4
+	; lda cursorY
+	; clc
+	; adc #MAP_DRAW_Y
+	; sta param5
+	; jsr drawMapChunk
 	
 	jmp moveUnitDone
 	

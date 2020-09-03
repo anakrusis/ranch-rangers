@@ -69,6 +69,8 @@ unitHeavenType  .rs 1
 unitHeavenTimer .rs 1
 computerMustMakeMove .rs 1
 endTurnTimer .rs 1
+moveAnimX .rs 1 ; for the animation when a unit moves
+moveAnimY .rs 1
 
 ;FULL RESERVED FOR MAP AND UNIT DATA
 	.rsset $0400 ; Hey 400 page is full, dont add anything more here
@@ -801,6 +803,12 @@ UnitMetaSprites:
 	.db $00, $10, $00, $10 ;farmer NOT TO BE USED
 	.db $60, $61, $70, $71 ;chicken
 	.db $62, $63, $72, $73 ;cow
+FarmerWalkFrontMetaSprites:
+	.db $40, $41, $50, $51
+	.db $42, $43, $52, $53
+FarmerWalkSideMetaSprites:
+	.db $44, $45, $54, $55
+	.db $46, $47, $56, $57
 	
 IndicatorSpriteAnimation:
 	.db $82, $83, $84, $83
