@@ -56,6 +56,8 @@ attackMode .rs 1 ; 1 when attacking, 0 when not attacking
 
 seed .rs 2
 
+spriteDrawCount .rs 1
+
 	.rsset $0100 ; Try not to add too much, or else you might risk hitting the stack
 turnAnimTimer .rs 1
 harvestAnimTimer .rs 1
@@ -398,13 +400,13 @@ vblankwait2:
 	
 	jsr clearScreen
 	
-	ldx #$00
-initCursorSprite:
-	lda CursorSpriteData, x
-	sta $0200, x
-	inx
-	cpx #$10
-	bne initCursorSprite
+	; ldx #$00
+; initCursorSprite:
+	; lda CursorSpriteData, x
+	; sta $0200, x
+	; inx
+	; cpx #$10
+	; bne initCursorSprite
 	
 EndInit:
 	jsr initGlobal
@@ -693,6 +695,7 @@ p2EndTurn:
 	.include "map.asm"
 	.include "unit.asm"
 	.include "draw.asm"
+	.include "sprite.asm"
 	.include "input.asm"
 	
 UnitHasCombinedAttackMove:
@@ -786,18 +789,14 @@ MetaTileAttributes:
 	.db $ff, $ff, $ff, $ff ; player 2 tiles
 	.db $aa, $ff ; border tiles
 	
-CursorSpriteData:
-	.db $00, $80, %00000011, $00
-	.db $00, $80, %01000011, $08  
-	.db $08, $80, %10000011, $00 
-	.db $08, $80, %11000011, $08 
-	
 MetaSpriteX:
 	.db $00, $08, $00, $08
 MetaSpriteY:
 	.db $00, $00, $08, $08
 	
 MetaSprites:
+	.db $90, $91, $a0, $a1
+UnitMetaSprites:
 	;death sprites first
 	.db $00, $10, $00, $10 ;farmer NOT TO BE USED
 	.db $60, $61, $70, $71 ;chicken
