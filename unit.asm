@@ -195,8 +195,10 @@ MoveP2Unit:
 	
 moveUnitDrawUpdate:
 	lda #$01        ; drawing box with width and height 1 (single tile update)
-	sta param6      ; at the site of the old unit place
-	sta param7
+	sta <param6      ; at the site of the old unit place
+	sta <param7
+	sta showAnimSpriteFlag ; this enables the sprite animation for units moving
+	
 	jsr drawMapChunk
 	
 	; now the sprite update setting its initial position to the old position set in param4/5
@@ -212,14 +214,6 @@ moveUnitDrawUpdate:
 	asl a
 	asl a
 	sta moveAnimY
-	
-	; lda cursorX     ; ditto now at the site of the new unit place
-	; sta param4
-	; lda cursorY
-	; clc
-	; adc #MAP_DRAW_Y
-	; sta param5
-	; jsr drawMapChunk
 	
 	jmp moveUnitDone
 	

@@ -201,22 +201,39 @@ drawHeavenSprite:
 	dec unitHeavenTimer
 
 drawHeavenSpriteDone:
-	lda endTurnTimer
-	cmp #$ff
-	bne drawTurnAnim
-	jmp drawTurnAnimDone
 
+	lda showAnimSpriteFlag
+	cmp #$01
+	beq drawTurnAnim
+	jmp drawTurnAnimDone
 drawTurnAnim:
+	jsr doUnitMovementStep
+
 	lda moveAnimX
 	sta <param2
 	lda moveAnimY
 	sta <param3
 	
-	lda #$00
-	sta <param4
-	lda #$05
+	lda turn
+	sta <param4 ; sprite palette matches unit allegiance (00 and 01!)
+	
+	lda moveAnimDir
+	asl a
+	clc
+	adc #$04 ; start of unit move metasprites is 04
+	sta <param9
+	
+	lda globalTick ; staggered by which frame of the animation its on, globalTick/8's LSB determines
+	lsr a
+	lsr a
+	lsr a
+	and #$01
+	clc
+	adc <param9
+	
 	sta <param5
-	lda #$00
+	
+	lda moveAnimFlip
 	sta <param6
 
 	jsr drawMetasprite
@@ -296,4 +313,61 @@ drawMetaSpriteLoop:
 	cpx #$04
 	bne drawMetaSpriteLoop
 
+	rts
+	
+doUnitMovementStep:
+	lda cursorX
+	asl a
+	asl a
+	asl a
+	asl a
+	sta moveAnimTargetX
+	lda cursorY
+	clc
+	adc #MAP_DRAW_Y
+	asl a
+	asl a
+	asl a
+	asl a
+	sta moveAnimTargetY
+	
+doMovX:
+	lda moveAnimX
+	cmp moveAnimTargetX
+	beq doMovY
+	bcc doMovAddX
+	bcs doMovSubX
+	jmp doMovY
+	
+doMovAddX: ; moving right
+	lda #$00
+	sta moveAnimFlip
+	lda #$01
+	sta moveAnimDir
+	inc moveAnimX
+	jmp doMovY
+doMovSubX: ; moving left
+	lda #$01
+	sta moveAnimFlip
+	sta moveAnimDir
+	dec moveAnimX	
+	
+doMovY:
+	lda moveAnimY
+	cmp moveAnimTargetY
+	beq doUnitMovementStepDone
+	bcc doMovAddY
+	bcs doMovSubY
+	jmp doUnitMovementStepDone
+	
+doMovAddY: ; moving down
+	lda #$00
+	sta moveAnimDir
+	inc moveAnimY
+	jmp doUnitMovementStepDone
+doMovSubY: ; moving up
+	lda #$02
+	sta moveAnimDir
+	dec moveAnimY
+doUnitMovementStepDone:	
 	rts

@@ -71,6 +71,11 @@ computerMustMakeMove .rs 1
 endTurnTimer .rs 1
 moveAnimX .rs 1 ; for the animation when a unit moves
 moveAnimY .rs 1
+moveAnimDir .rs 1 ; forward 00 l/r 01 backwards 02
+moveAnimFlip .rs 1 ; facing right (00) or left (01)
+moveAnimTargetX .rs 1
+moveAnimTargetY .rs 1
+showAnimSpriteFlag .rs 1
 
 ;FULL RESERVED FOR MAP AND UNIT DATA
 	.rsset $0400 ; Hey 400 page is full, dont add anything more here
@@ -300,7 +305,6 @@ TurnScreenHandlerHumanPlayer:
 TurnScreenHandlerComputerPlayer:
 	lda #$11
 	sta guiMode
-	jsr AiUpdate
 	
 TurnScreenHandlerUpdateScreen:
 	lda #$01
@@ -351,12 +355,22 @@ EndTurnTimerUpdate:
 	jmp EndTurnTimerDone
 	
 EndTurnTimerTrigger:
-	lda #$ff
-	sta endTurnTimer
 	jsr endTurnTimerFinished
 	
 EndTurnTimerDone:
-
+; Ai only does its update in guimode 11 (all buttons locked), and once nametable buffering finishes
+AICheck:
+	lda guiMode
+	cmp #$11
+	bne AiCheckDone
+	
+	lda tileBufferLength
+	cmp #$00
+	bne AiCheckDone
+	
+	jsr AiUpdate
+	
+AiCheckDone:
 SetColorBars:
 	lda #%00111110
 	sta $2001
@@ -617,7 +631,7 @@ player2TurnStartDone:
 	
 ; sets up for the animation of the unit moving, or whatever goes on this turn
 endTurn:
-	lda #$80
+	lda #$40
 	sta endTurnTimer
 
 	lda turn
@@ -630,7 +644,24 @@ endTurn:
 	rts
 
 endTurnTimerFinished:
+	; this ensures it wont go off again
+	lda #$ff
+	sta endTurnTimer
+	lda #$00
+	sta showAnimSpriteFlag
+
 	; TODO check if either team has no units and issue the game over
+	
+	lda #$01
+	sta <param6
+	sta <param7
+	lda <cursorX     ; draw unit in new place now that turn is finished
+	sta <param4
+	lda <cursorY
+	clc
+	adc #MAP_DRAW_Y
+	sta <param5
+	jsr drawMapChunk
 
 	inc turnCount
 	inc seasonTurnCounter
@@ -799,16 +830,25 @@ MetaSpriteY:
 MetaSprites:
 	.db $90, $91, $a0, $a1
 UnitMetaSprites:
+UnitDeathMetaSprites:
 	;death sprites first
-	.db $00, $10, $00, $10 ;farmer NOT TO BE USED
+	.db $00, $10, $00, $10 ;farmer NOT USED
 	.db $60, $61, $70, $71 ;chicken
 	.db $62, $63, $72, $73 ;cow
-FarmerWalkFrontMetaSprites:
+	
+UnitMoveMetaSprites:
+; farmer front move
 	.db $40, $41, $50, $51
 	.db $42, $43, $52, $53
-FarmerWalkSideMetaSprites:
+; farmer side move
 	.db $44, $45, $54, $55
 	.db $46, $47, $56, $57
+; farmer back move
+	.db $48, $49, $58, $59
+	.db $4a, $4b, $5a, $5b
+; farmer reserved
+	.db $00, $00, $00, $00
+	.db $00, $00, $00, $00
 	
 IndicatorSpriteAnimation:
 	.db $82, $83, $84, $83
@@ -831,13 +871,13 @@ winterPalette:
 	.db $3c, $30, $11, $38, $3c, $15, $0a, $2c, $3c, $05, $27, $30, $3c, $03, $24, $30
 	
 spritePalette:
-	.db $2a, $05, $27, $30, $2a, $04, $24, $30, $2a, $0f, $30, $21, $2a, $14, $22, $34 ; sprites
+	.db $2a, $05, $27, $30, $2a, $03, $24, $30, $2a, $0f, $30, $21, $2a, $14, $22, $34 ; sprites
 	
 text_TheLicc:
 	.db $1d, $31, $2e, $24, $15, $32, $2c, $2c, $ff ; "THE LICC"
 	
 text_EngineTitle:	
-	.db $1b, $1b, $28, $08, $27, $02, $09, $27, $02, $00, $02, $00, $ff ; rr.8/29/2020
+	.db $1b, $1b, $28, $09, $27, $03, $27, $02, $00, $02, $00, $ff ; rr.9/3/2020
 	
 text_Icle:
 	.db $12, $0c, $15, $0e, $ff ; icle
