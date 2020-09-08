@@ -501,7 +501,7 @@ P2UnitFound:
 	
 ; param1 param2: x1, y1
 ; param3 param4: x2, y2
-; output in param5
+; output in param5 (and A)
 chebyshevDistance:
 subtractX1X2:
 	lda param3

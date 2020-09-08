@@ -4,15 +4,22 @@
     .inesmir 1 ;background mirroring (vertical mirroring = horizontal scrolling)
 
 	.rsset $0000
-param1 .rs 1 ; local parameters for functions when you cant use a register
-param2 .rs 1
-param3 .rs 1
-param4 .rs 1
-param5 .rs 1
-param6 .rs 1
-param7 .rs 1
-param8 .rs 1
-param9 .rs 1
+param1  .rs 1 ; local parameters for functions when you cant use a register
+param2  .rs 1
+param3  .rs 1
+param4  .rs 1
+param5  .rs 1
+param6  .rs 1
+param7  .rs 1
+param8  .rs 1
+param9  .rs 1
+param10 .rs 1
+param11 .rs 1
+param12 .rs 1
+param13 .rs 1
+param14 .rs 1
+param15 .rs 1
+param16 .rs 1	
 	
 globalTick .rs 1 ; For everything
 turn .rs 1       ; 00 = player 1, 01 = player 2
@@ -474,8 +481,8 @@ initDebugMenu:
 	sta guiMode
 	jsr openTextBox
 	
-	lda #$01
-	jsr FamiToneMusicPlay
+	;lda #$01
+	jsr FamiToneMusicStop
 	
 	rts
 	
@@ -958,7 +965,7 @@ text_TheLicc:
 	.db $1d, $31, $2e, $24, $15, $32, $2c, $2c, $ff ; "THE LICC"
 	
 text_EngineTitle:	
-	.db $1b, $1b, $28, $09, $27, $07, $27, $02, $00, $02, $00, $ff ; rr.9/7/2020
+	.db $1b, $1b, $28, $09, $27, $08, $27, $02, $00, $02, $00, $ff ; rr.9/8/2020
 	
 text_Icle:
 	.db $12, $0c, $15, $0e, $ff ; icle
