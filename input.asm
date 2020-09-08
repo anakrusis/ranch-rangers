@@ -27,6 +27,8 @@ InputBGuimodeCheck:
 	beq InputBDoNothing
 	cmp #$0c
 	beq InputBDoNothing
+	cmp #$0f
+	beq InputBDoNothing
 	cmp #$10
 	beq InputBDoNothing
 	cmp #$11
@@ -97,6 +99,8 @@ InputAGuimodeCheck:
 	beq InputAMoveScreen
 	cmp #$0a
 	beq InputAAttackScreen
+	cmp #$0f
+	beq InputAGameOverScreen
 	cmp #$10
 	beq InputADebugMenuScreen
 	
@@ -145,6 +149,25 @@ InputACowScreen:
 	jsr AButtonCowScreenHandler
 	jmp InputADone
 	
+InputAGameOverScreen:
+	lda #$00
+	cmp menuCursorPos
+	beq playAgain
+	jmp quitToMenu
+	
+playAgain:
+	jsr initGlobal
+	jsr initGameState
+	jmp InputADone
+	
+quitToMenu:
+	jsr initGlobal
+	jsr initDebugMenu
+	jmp InputADone
+	
+InputAChickenScreen:
+	jsr AButtonChickenScreenHandler
+	
 InputAFarmerScreen:
 MoveFarmer:
 	lda #$00
@@ -152,47 +175,6 @@ MoveFarmer:
 	lda #$09
 	sta guiMode
 	jsr calculateUnitMoves
-	jsr closeCurrentTextBox
-	jmp InputADone
-	
-InputAChickenScreen:
-	lda menuCursorPos
-	cmp #$00
-	beq MoveChicken
-	cmp #$01
-	beq AttackChicken
-	cmp #$02
-	beq DeleteChicken
-	jmp InputADone
-
-MoveChicken:
-	lda #$00
-	sta attackMode
-	lda #$09
-	sta guiMode
-	jsr calculateUnitMoves
-	jsr closeCurrentTextBox	
-	jmp InputADone
-	
-AttackChicken:
-	lda #$01
-	sta attackMode
-	lda #$0a
-	sta guiMode
-	jsr calculateUnitMoves
-	jsr closeCurrentTextBox
-	jmp InputADone
-
-DeleteChicken:
-	lda <unitSelected
-	sta <param3
-	lda <turn
-	sta <param4
-	jsr removeUnit
-	jsr removeUnitAnimationSfxInit
-	
-	lda #$01
-	sta guiMode
 	jsr closeCurrentTextBox
 	jmp InputADone
 	
@@ -568,6 +550,47 @@ RemoveCow:
 	sta param3
 	lda turn
 	sta param4
+	jsr removeUnit
+	jsr removeUnitAnimationSfxInit
+	
+	lda #$01
+	sta guiMode
+	jsr closeCurrentTextBox
+	rts
+	
+AButtonChickenScreenHandler:
+	lda menuCursorPos
+	cmp #$00
+	beq MoveChicken
+	cmp #$01
+	beq AttackChicken
+	cmp #$02
+	beq DeleteChicken
+	rts
+
+MoveChicken:
+	lda #$00
+	sta attackMode
+	lda #$09
+	sta guiMode
+	jsr calculateUnitMoves
+	jsr closeCurrentTextBox	
+	rts
+	
+AttackChicken:
+	lda #$01
+	sta attackMode
+	lda #$0a
+	sta guiMode
+	jsr calculateUnitMoves
+	jsr closeCurrentTextBox
+	rts
+
+DeleteChicken:
+	lda <unitSelected
+	sta <param3
+	lda <turn
+	sta <param4
 	jsr removeUnit
 	jsr removeUnitAnimationSfxInit
 	

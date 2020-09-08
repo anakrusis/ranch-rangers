@@ -58,7 +58,7 @@ seed .rs 2
 
 spriteDrawCount .rs 1
 
-	.rsset $0100 ; Try not to add too much, or else you might risk hitting the stack
+	.rsset $0100 ; these are all timers/values for animations and stuff, non-essential stuff really
 turnAnimTimer .rs 1
 harvestAnimTimer .rs 1
 dpadInputTimer .rs 1
@@ -108,10 +108,12 @@ validMovesCount .rs 1
 validMovesX .rs 32
 validMovesY .rs 32
 
-; RESERVED FOR TILE BUFFERING
-	.rsset $0600
+	.rsset $05fe
 tileBufferLength .rs 1
 tileBufferIndex  .rs 1
+
+; RESERVED FOR TILE BUFFERING
+	.rsset $0600
 tileBuffer .rs 64
 
 	.rsset $0700
@@ -135,7 +137,13 @@ SEASONS_LENGTH_IN_TURNS = $01 ; 3 usually for now
 TILE_WATER = $00
 TILE_TREES = $01
 TILE_GRASS = $02
-TILE_FARM = $03
+TILE_FARM  = $03
+
+GUIMODE_PAUSED    = $00
+GUIMODE_MAIN      = $01
+GUIMODE_GAMEOVER  = $0f
+GUIMODE_DEBUGMENU = $10
+GUIMODE_AIDECIDE  = $11
 
 ;----- first 8k bank of PRG-ROM    
     .bank 0
@@ -303,13 +311,10 @@ TurnScreenHandlerHumanPlayer:
 	jmp TurnScreenHandlerUpdateScreen
 
 TurnScreenHandlerComputerPlayer:
-	lda #$11
+	lda #GUIMODE_AIDECIDE
 	sta guiMode
 	
 TurnScreenHandlerUpdateScreen:
-	lda #$01
-	sta seasonPaletteChangeFlag
-	
 	jsr closeCurrentTextBox
 	jsr updateHotbar
 	
@@ -396,7 +401,7 @@ vblankwait1:
 	bit $2002
 	bpl vblankwait1
 	
-clearmem:
+clearmemLoop:
     lda #$00
     sta $0000, x
     sta $0100, x
@@ -408,21 +413,13 @@ clearmem:
     lda #$FE
     sta $0200, x
     inx
-    bne clearmem
+    bne clearmemLoop
 	
 vblankwait2:
 	bit $2002
 	bpl vblankwait2
 	
 	jsr clearScreen
-	
-	; ldx #$00
-; initCursorSprite:
-	; lda CursorSpriteData, x
-	; sta $0200, x
-	; inx
-	; cpx #$10
-	; bne initCursorSprite
 	
 EndInit:
 	jsr initGlobal
@@ -438,6 +435,13 @@ forever:
     jmp forever
 	
 initGlobal:
+	lda #$00 ; nmi disabled
+	sta $2000
+	lda #%00000110 ; background and sprites disabled
+	sta $2001
+	
+	jsr clearScreen
+
 	lda #$ff
 	sta endTurnTimer
 	
@@ -447,6 +451,11 @@ initGlobal:
 	lda #$05
 	sta activeGuiX
 	sta activeGuiY
+	
+	lda #$90 ; nmi enabled
+	sta $2000
+	lda #%00011110 ; background and sprites enabled
+	sta $2001
 	
 	; initialize music!!
 	lda #$01 ; ntsc
@@ -471,6 +480,29 @@ initDebugMenu:
 	rts
 	
 initGameState:
+	
+	lda globalTick ; globalTick and gameMode are Noah and his family, and the stack is the ark
+	pha
+	lda gameMode
+	pha
+	
+	ldx #$00
+clearNonEssentialMem: ; this is the flood
+    lda #$00
+    sta $0000, x
+    ;sta $0300, x
+    sta $0400, x
+    sta $0500, x
+    ;sta $0600, x
+    sta $0700, x
+    inx
+    bne clearNonEssentialMem
+	
+	pla
+	sta gameMode
+	pla
+	sta globalTick ; now only Noah and his family remain
+
 	lda #$ff
 	sta endTurnTimer
 
@@ -619,9 +651,10 @@ player2TurnStart:
 	sta guiMode
 	jsr openTextBox
 	
-	lda #$00
-	cmp gameMode
-	bne player2TurnStartDone
+	; temporarily only single player is enabled for now 
+	;lda #$00
+	;cmp gameMode
+	;bne player2TurnStartDone
 	
 	lda #$01
 	sta computerMustMakeMove
@@ -649,8 +682,6 @@ endTurnTimerFinished:
 	sta endTurnTimer
 	lda #$00
 	sta showAnimSpriteFlag
-
-	; TODO check if either team has no units and issue the game over
 	
 	lda #$01
 	sta <param6
@@ -666,12 +697,20 @@ endTurnTimerFinished:
 	inc turnCount
 	inc seasonTurnCounter
 	
+	jsr checkIfGameOver
+	cmp #$ff
+	beq endTurnNonGameover
+	jmp endTurnGameover
+
+endTurnNonGameover:
 	lda seasonTurnCounter
 	cmp #SEASONS_LENGTH_IN_TURNS
 	bne checkIfHarvestTime
 	
 	lda #$00
 	sta seasonTurnCounter
+	lda #$01
+	sta seasonPaletteChangeFlag
 	
 	inc season
 	lda season
@@ -722,6 +761,48 @@ p2EndTurn:
 	sta turn
 	jsr player1TurnStart
 	
+	rts
+	
+endTurnGameover:
+	lda #$04
+	jsr FamiToneMusicPlay
+	
+	lda #GUIMODE_GAMEOVER
+	sta guiMode
+	jsr openTextBox
+	
+	rts
+	
+; A: ff if no game over, 00 if p1 game over, 01 if p2 game over
+checkIfGameOver:
+	; the first item in the units type array should be 00 (farmer) otherwise the farmer is gone (he cant be added bacK)
+	lda p1PiecesType
+	cmp #$00
+	bne p1GameOverFlag
+	
+	lda p2PiecesType
+	cmp #$00
+	bne p2GameOverFlag
+	
+	; or if no units are present that also means no farmer
+	lda p1UnitCount
+	cmp #$00
+	beq p1GameOverFlag
+	
+	lda p2UnitCount
+	cmp #$00
+	beq p2GameOverFlag
+	
+noGameOverFlag:	
+	lda #$ff
+	rts
+	
+p1GameOverFlag:
+	lda #$00
+	rts
+	
+p2GameOverFlag:
+	lda #$01
 	rts
 	
 	.include "ai.asm"
@@ -877,7 +958,7 @@ text_TheLicc:
 	.db $1d, $31, $2e, $24, $15, $32, $2c, $2c, $ff ; "THE LICC"
 	
 text_EngineTitle:	
-	.db $1b, $1b, $28, $09, $27, $03, $27, $02, $00, $02, $00, $ff ; rr.9/3/2020
+	.db $1b, $1b, $28, $09, $27, $07, $27, $02, $00, $02, $00, $ff ; rr.9/7/2020
 	
 text_Icle:
 	.db $12, $0c, $15, $0e, $ff ; icle
@@ -918,27 +999,34 @@ text_Winter:
 	
 text_Harvest:
 	.db $2a, $fe, $11, $0a, $1b, $1f, $0e, $1c, $1d, $26, $ff
+text_Player1Win:
+	.db $2a, $fe, $19, $15, $0a, $22, $0e, $1b, $24, $01, $24, $20, $12, $17, $1c, $26, $ff
+text_Player2Win:
+	.db $2a, $fe, $19, $15, $0a, $22, $0e, $1b, $24, $02, $24, $20, $12, $17, $1c, $26, $ff
 	
 text_DebugMenu:
 	.db $16, $0e, $17, $1e, $fe, $0d, $0e, $0b, $1e, $10, $24, $16, $18, $0d, $0e, $fe, $17, $18, $1b, $16, $0a, $15, $ff
 	
+text_GameOverMenu:
+	.db $2a, $fe, $19, $15, $0a, $22, $24, $0a, $10, $0a, $12, $17, $fe, $1a, $1e, $12, $1d, $ff
+	
 GuiX:
 	;     0    1    2    3    4    5    6    7    8    9    a    b    c    d    e    f   10   11
-	.db $01, $01, $03, $08, $05, $05, $05, $03, $03, $01, $01, $01, $05, $01, $01, $01, $06, $01
+	.db $01, $01, $03, $08, $05, $05, $05, $03, $03, $01, $01, $01, $05, $01, $01, $05, $06, $01
 GuiY:
-	.db $01, $01, $06, $06, $06, $06, $06, $06, $06, $01, $01, $01, $06, $01, $01, $01, $06, $01
+	.db $01, $01, $06, $06, $06, $06, $06, $06, $06, $01, $01, $01, $06, $01, $01, $08, $06, $01
 GuiWidths:
-	.db $01, $01, $05, $07, $05, $05, $05, $0a, $0a, $01, $01, $01, $06, $01, $01, $01, $07, $01
+	.db $01, $01, $05, $07, $05, $05, $05, $0a, $0a, $01, $01, $01, $06, $01, $01, $07, $07, $01
 GuiHeights:
-	.db $01, $01, $03, $03, $02, $04, $03, $02, $02, $01, $01, $01, $02, $01, $01, $01, $06, $01
+	.db $01, $01, $03, $03, $02, $04, $03, $02, $02, $01, $01, $01, $02, $01, $01, $03, $06, $01
 GuiMenuSizes:
-	.db $00, $00, $02, $02, $01, $03, $02, $00, $00, $00, $00, $00, $00, $01, $01, $01, $02, $00
+	.db $00, $00, $02, $02, $01, $03, $02, $00, $00, $00, $00, $00, $00, $01, $01, $02, $02, $00
 	
 GuiPointerLow:
-	.db $00, LOW(text_EngineTitle), LOW(text_BuildMenu), LOW(text_UnitMenu), LOW(text_FarmerMenu), LOW(text_ChickenMenu), LOW(text_CowMenu), LOW(text_Player1Turn), LOW(text_Player2Turn), $00, $00, $00, LOW(text_Harvest), $00, $00, $00, LOW(text_DebugMenu)
+	.db $00, LOW(text_EngineTitle), LOW(text_BuildMenu), LOW(text_UnitMenu), LOW(text_FarmerMenu), LOW(text_ChickenMenu), LOW(text_CowMenu), LOW(text_Player1Turn), LOW(text_Player2Turn), $00, $00, $00, LOW(text_Harvest), $00, $00, LOW(text_GameOverMenu), LOW(text_DebugMenu)
 
 GuiPointerHigh:
-	.db $00, HIGH(text_EngineTitle), HIGH(text_BuildMenu), HIGH(text_UnitMenu), HIGH(text_FarmerMenu), HIGH(text_ChickenMenu), HIGH(text_CowMenu), HIGH(text_Player1Turn), HIGH(text_Player2Turn), $00, $00, $00, HIGH(text_Harvest), $00, $00, $00, HIGH(text_DebugMenu)
+	.db $00, HIGH(text_EngineTitle), HIGH(text_BuildMenu), HIGH(text_UnitMenu), HIGH(text_FarmerMenu), HIGH(text_ChickenMenu), HIGH(text_CowMenu), HIGH(text_Player1Turn), HIGH(text_Player2Turn), $00, $00, $00, HIGH(text_Harvest), $00, $00, HIGH(text_GameOverMenu), HIGH(text_DebugMenu)
 	
 Song:
 	.db $7f, $20, $02, $25, $0c ; fantasia in funk

@@ -21,3 +21,4 @@ for i in range(len(stringIn)):
     stringOut += ", "
 
 print(stringOut + "$ff")
+wait = input("Press enter to exit")

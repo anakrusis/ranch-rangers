@@ -217,6 +217,7 @@ drawTurnAnim:
 	lda turn
 	sta <param4 ; sprite palette matches unit allegiance (00 and 01!)
 	
+	; todo offset this by unit type
 	lda moveAnimDir
 	asl a
 	clc

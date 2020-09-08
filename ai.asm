@@ -5,6 +5,9 @@ AiUpdate:
 	jmp AiDone
 	
 AiUpdateBegin:
+	lda #$00
+	sta attackMode
+	
 	ldy #$00
 	sty unitSelected
 	
