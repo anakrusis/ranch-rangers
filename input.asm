@@ -167,6 +167,7 @@ quitToMenu:
 	
 InputAChickenScreen:
 	jsr AButtonChickenScreenHandler
+	jmp InputADone
 	
 InputAFarmerScreen:
 MoveFarmer:
