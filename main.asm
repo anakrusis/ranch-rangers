@@ -133,7 +133,7 @@ JOYPAD1 = $4016
 JOYPAD2 = $4017
 
 MAP_DRAW_Y = $03
-MAX_METATILE_CHANGES = $02 ; per frame, 8 tiles per frame
+MAX_METATILE_CHANGES = $03 ; per frame, 8 tiles per frame
 
 ; in the metatile data
 P1_UNITS_START_OFFSET = $04
@@ -158,6 +158,15 @@ GUIMODE_AIDECIDE  = $11
     
 irq:
 nmi:
+
+	pha
+    txa
+    pha
+    tya
+    pha
+
+	lda #%00010000   ; turning off NMI while non-drawing stuff happens
+	sta $2000
 
 RefreshHotbarText:
 	lda hotbarTextNeedsRefresh
@@ -255,9 +264,6 @@ DrawDone:
 	lda #$00  ; no scrolling
 	sta $2005
 	sta $2005
-	
-	lda #%00010000   ; turning off NMI while non-drawing stuff happens
-	sta $2000
 	
 	lda #$00
 	sta $2003  
@@ -398,6 +404,12 @@ SetColorBars:
 	lda #%10010000   ; re enabling NMI now that game logic stuff is finished
 	sta $2000
 	
+	pla            ; restore regs and exit
+    tay
+    pla
+    tax
+    pla
+	
     rti
 
 reset:
@@ -487,6 +499,10 @@ initDebugMenu:
 	rts
 	
 initGameState:
+	lda #$10 ; nmi disabled
+	sta $2000
+	lda #%00000110 ; background and sprites disabled
+	sta $2001
 	
 	lda globalTick ; globalTick and gameMode are Noah and his family, and the stack is the ark
 	pha
@@ -513,18 +529,8 @@ clearNonEssentialMem: ; this is the flood
 	lda #$ff
 	sta endTurnTimer
 
-	lda #$10 ; nmi disabled
-	sta $2000
-	lda #%00000110 ; background and sprites disabled
-	sta $2001
-
 	jsr GenerateMap
 	jsr drawMap
-	
-	lda #$90 ; nmi enabled
-	sta $2000
-	lda #%00011110 ; background and sprites enabled
-	sta $2001
 	
 	lda #$01
 	sta guiMode ; main guimode
@@ -559,6 +565,11 @@ clearNonEssentialMem: ; this is the flood
 	jsr giveStartingMoney
 	
 	jsr checkIfHarvestTime
+	
+	lda #$90 ; nmi enabled
+	sta $2000
+	lda #%00011110 ; background and sprites enabled
+	sta $2001
 	
 	rts
 	
@@ -903,12 +914,34 @@ BorderTiles: ; $15-16
 	.db $51, $44, $40, $44 ; p1 border
 	.db $45, $40, $45, $40 ; p2 border
 	
+WaterTiles: ; $17...
+	.db $43, $43, $43, $43
+	.db $43, $6c, $43, $6c
+	.db $5b, $5b, $43, $43
+	.db $5b, $5c, $43, $6c
+	
+	.db $6a, $43, $6a, $43
+	.db $6a, $6c, $6a, $6c
+	.db $5a, $5b, $6a, $43
+	.db $5a, $5c, $6a, $6c
+	
+	.db $43, $43, $7b, $7b
+	.db $43, $6c, $7b, $7c
+	.db $5b, $5b, $7b, $7b
+	.db $5b, $5c, $7b, $7c
+	
+	.db $6a, $43, $7a, $7b
+	.db $6a, $6c, $7a, $7c
+	.db $5a, $5b, $7a, $7b
+	.db $5a, $5c, $7a, $7c
+	
 MetaTileAttributes:
 	.db $00, $55, $55, $55 ; map tiles
 	.db $aa, $aa, $aa, $aa ; player 1 tiles
 	.db $00, $00, $00, $00, $00, $00, $00, $00, $00 ; textbox tiles
 	.db $ff, $ff, $ff, $ff ; player 2 tiles
 	.db $aa, $ff ; border tiles
+	.db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00 ; 16 water tile possibles
 	
 MetaSpriteX:
 	.db $00, $08, $00, $08
@@ -938,25 +971,38 @@ UnitMoveMetaSprites:
 	.db $00, $00, $00, $00
 	.db $00, $00, $00, $00
 	
+; chicken front move
+	.db $20, $21, $30, $31
+	.db $22, $23, $32, $33
+; chicken side move
+	.db $20, $21, $30, $31
+	.db $22, $23, $32, $33
+; chicken back move
+	.db $20, $21, $30, $31
+	.db $22, $23, $32, $33
+; chicken reserved
+	.db $00, $00, $00, $00
+	.db $00, $00, $00, $00
+	
 IndicatorSpriteAnimation:
 	.db $82, $83, $84, $83
 
 dawnPalette:
-	.db $29, $30, $11, $38, $29, $17, $08, $18, $29, $05, $27, $30, $29, $03, $24, $30
+	.db $29, $30, $11, $01, $29, $17, $08, $18, $29, $05, $27, $30, $29, $03, $24, $30
 dayPalette:
-	.db $2a, $30, $11, $38, $2a, $17, $0a, $1a, $2a, $05, $27, $30, $2a, $03, $24, $30
+	.db $2a, $30, $11, $01, $2a, $17, $0a, $1a, $2a, $05, $27, $30, $2a, $03, $24, $30
 duskPalette:
-	.db $28, $30, $0c, $38, $28, $16, $07, $17, $28, $05, $27, $30, $28, $03, $24, $30
+	.db $28, $30, $0c, $0f, $28, $16, $07, $17, $28, $05, $27, $30, $28, $03, $24, $30
 nightPalette:
-	.db $12, $30, $0f, $38, $12, $17, $0f, $02, $12, $05, $27, $30, $12, $03, $24, $30
+	.db $12, $30, $0f, $0f, $12, $17, $0f, $02, $12, $05, $27, $30, $12, $03, $24, $30
 	
 duskPalette2:
-	.db $26, $30, $0c, $38, $26, $17, $0f, $16, $26, $05, $27, $30, $26, $03, $24, $30
+	.db $26, $30, $0c, $0f, $26, $17, $0f, $16, $26, $05, $27, $30, $26, $03, $24, $30
 duskPalette3:
-	.db $14, $30, $0f, $38, $14, $17, $0f, $04, $14, $05, $27, $30, $14, $03, $24, $30
+	.db $14, $30, $0f, $0f, $14, $17, $0f, $04, $14, $05, $27, $30, $14, $03, $24, $30
 	
 winterPalette:
-	.db $3c, $30, $11, $38, $3c, $15, $0a, $2c, $3c, $05, $27, $30, $3c, $03, $24, $30
+	.db $3c, $30, $11, $0f, $3c, $15, $0a, $2c, $3c, $05, $27, $30, $3c, $03, $24, $30
 	
 spritePalette:
 	.db $2a, $05, $27, $30, $2a, $03, $24, $30, $2a, $0f, $30, $21, $2a, $14, $22, $34 ; sprites
@@ -965,7 +1011,7 @@ text_TheLicc:
 	.db $1d, $31, $2e, $24, $15, $32, $2c, $2c, $ff ; "THE LICC"
 	
 text_EngineTitle:	
-	.db $1b, $1b, $28, $09, $27, $08, $27, $02, $00, $02, $00, $ff ; rr.9/8/2020
+	.db $1b, $1b, $28, $09, $27, $01, $01, $27, $02, $00, $02, $00, $ff ; rr.9/11/2020
 	
 text_Icle:
 	.db $12, $0c, $15, $0e, $ff ; icle

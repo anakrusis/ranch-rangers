@@ -343,17 +343,27 @@ drawMap:
 mapByteLoop:
 	
 	lda MapData, x
-	cmp #$02
-	bne drawMapTileRegular
+	cmp #TILE_GRASS
+	beq mapByteLoopDrawGrass
+	cmp #TILE_WATER
+	beq mapByteLoopDrawWater
 	
+	jmp drawMapTileRegular
+	
+mapByteLoopDrawGrass:
 	jsr HandleGrassDraw
-	sta param1
+	sta <param1
+	jmp drawMapTransform
+	
+mapByteLoopDrawWater:
+	jsr HandleWaterDraw
+	sta <param1
 	jmp drawMapTransform
 
 drawMapTileRegular:	
 	lda MapData, x
 	sta currentMapByte
-	sta param1
+	sta <param1
 
 drawMapTransform:
 	txa ; x coordinate (modulo 16)
@@ -668,11 +678,22 @@ drawTileNoUnit:
 	lda MapData, x ; now A has the tile value, which is now given to param1
 	
 	; grass is handled uniquely when drawing tiles
+	; water is also now!
 	cmp #TILE_GRASS
-	bne NonGrassDraw
-	jsr HandleGrassDraw
+	beq GrassDraw
+	cmp #TILE_WATER
+	beq WaterDraw
 	
-NonGrassDraw:
+	jmp NormalTileDraw
+	
+GrassDraw:
+	jsr HandleGrassDraw
+	jmp NormalTileDraw
+
+WaterDraw:
+	jsr HandleWaterDraw
+	
+NormalTileDraw:
 	sta <param1
 	
 	pla ; x is back in business
@@ -735,6 +756,77 @@ drawBorderLeft:
 
 drawBorderRight
 	lda #$16
+	rts
+	
+; input: absolute index to mapdata in X
+; output: tile value in A
+HandleWaterDraw:
+
+	lda #$00
+	sta <param8 ;param8 temporarily stores index into metatile data "which tile to draw"
+
+	txa
+	stx <param9 ;param9 temporarily contains index to MapData "where is the tile in question?"
+	
+LandTileRightCheck: ; right tile = +01
+	clc
+	adc #$01
+	tax
+	lda MapData, x
+	cmp #TILE_WATER
+	beq LandTileUpCheck
+	
+	inc param8
+	
+LandTileUpCheck: ; up tile = +02
+	lda <param9
+	sec
+	sbc #$10
+	tax
+	lda MapData, x
+	cmp #TILE_WATER
+	beq LandTileLeftCheck
+	
+	lda <param8
+	clc
+	adc #$02
+	sta <param8
+	
+LandTileLeftCheck:
+	lda <param9
+	sec
+	sbc #$01
+	tax
+	lda MapData, x
+	cmp #TILE_WATER
+	beq LandTileDownCheck	
+	
+	lda <param8
+	clc
+	adc #$04
+	sta <param8	
+	
+LandTileDownCheck:
+	lda <param9
+	clc
+	adc #$10
+	tax
+	lda MapData, x
+	cmp #TILE_WATER
+	beq LandTileCheckDone	
+	
+	lda <param8
+	clc
+	adc #$08
+	sta <param8
+	
+LandTileCheckDone:
+	lda <param9
+	tax ; clobber protection is done
+
+	lda <param8
+	clc
+	adc #$17
 	rts
 	
 ; You know how it goes, param1 type, param2 Xposition, param3 Yposition

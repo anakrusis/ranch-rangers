@@ -28,6 +28,12 @@ prng2:
 	
 GenerateMap:
 	lda globalTick
+	cmp #$00
+	bne seedStore
+	
+	clc
+	adc #$01 ; if the seed is 0 then add 1, prng breaks with 0
+seedStore:
 	sta seed
 
 	ldx #$00
@@ -52,6 +58,7 @@ GenMapLoopTail:
 	
 	rts
 	
+; probability of a tile being land
 landProbabilityTable:
 	.db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 	.db $00, $10, $10, $10, $10, $40, $40, $40, $40, $40, $40, $10, $10, $10, $10, $00

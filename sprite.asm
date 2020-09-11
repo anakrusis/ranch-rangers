@@ -217,11 +217,18 @@ drawTurnAnim:
 	lda turn
 	sta <param4 ; sprite palette matches unit allegiance (00 and 01!)
 	
+	lda unitSelectedType
+	asl a
+	asl a
+	asl a
+	sta <param9
+	
 	; todo offset this by unit type
 	lda moveAnimDir
 	asl a
 	clc
 	adc #$04 ; start of unit move metasprites is 04
+	adc <param9
 	sta <param9
 	
 	lda globalTick ; staggered by which frame of the animation its on, globalTick/8's LSB determines
