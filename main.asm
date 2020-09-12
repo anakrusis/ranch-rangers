@@ -41,6 +41,7 @@ stringPtr  .rs 2 ; Where's the string we're rendering
 strPPUAddress .rs 2 ; What address will the string go to in the ppu
 
 currentMapByte .rs 1 ; what byte is being parsed of the map right now
+MapWidth       .rs 1
 tilePPUAddress .rs 2 ; ditto as above but for tile changes
 
 teste .rs 2 ; my trusty logger. Now it's a big boy and it can log pointers too.
@@ -132,6 +133,7 @@ stringBuffer       .rs 32
 JOYPAD1 = $4016
 JOYPAD2 = $4017
 
+MAP_WIDTH  = $10
 MAP_DRAW_Y = $03
 MAX_METATILE_CHANGES = $03 ; per frame, 8 tiles per frame
 

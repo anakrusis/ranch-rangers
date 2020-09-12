@@ -38,6 +38,20 @@ farmerSafeP1UnitsLoopTail:
 	bne farmerSafeP1UnitsLoop
 	
 CheckFarmerSafetyDone:
+CheckMoney:
+	lda p2Gold
+	cmp #$02
+	bcs CheckEnemyUnitCount
+	
+	jmp PlaceFarmAtRightmostTile
+	
+CheckEnemyUnitCount:
+	jsr compareEnemyFriendlyUnitsInTerritory
+	cmp #$00
+	beq CheckEnemyUnitCountDone
+	jmp PlaceNewUnitThreateningly
+	
+CheckEnemyUnitCountDone:
 	jmp EndTurnAiDone
 
 AiDone:
@@ -136,4 +150,77 @@ farmerMoveFurthestAvailable:
 	sta cursorY
 	jsr moveSelectedUnitToCursorPos
 	
+	jmp AiDone
+	
+; output in A 
+; 00 = more friends than enemies
+; 01 = more enemies or equal
+compareEnemyFriendlyUnitsInTerritory
+	lda #$00
+	sta <param10 ; p1 unit count in terr
+	sta <param11 ; p2 unit count in terr
+	
+	lda <MapWidth ; map width divided by 2
+	lsr a
+	sta <param9 ; center of the map, mapwidth/2
+	
+	ldx #$00
+compareEnemyLoop:
+	lda p1PiecesX, x
+	cmp <param9
+ ; if piece position is less than mapwidth/2 (left of center) then ignore
+	bcc compareEnemyLoopTail
+ ; if piece is right of center then it's in the AI's territory
+	inc <param10
+	
+compareEnemyLoopTail:
+	inx
+	cpx p1UnitCount
+	bne compareEnemyLoop
+	
+; same deal but with p2's units
+	ldx #$00
+compareFriendlyLoop:
+	lda p2PiecesX, x
+	cmp <param9
+	bcc compareFriendlyLoopTail
+	
+	inc <param11
+	
+compareFriendlyLoopTail:	
+	inx
+	cpx p2UnitCount
+	bne compareFriendlyLoop
+	
+compareEnemyFriendlyCount:
+	lda <param10
+	cmp <param11
+	bcs MoreOrEqualEnemies ; enemyCount >= friendlyCount
+	
+	lda #$00
+	rts
+	
+MoreOrEqualEnemies:
+	lda #$01
+	rts
+	
+; param4/5 will store the X and Y position to place this unit
+; param6 will be the type
+; these are aligned with the buyUnit subroutine which is the core of this code
+PlaceNewUnitThreateningly:
+FindTileToThreatenAMaraudingUnit:
+	
+	; todo... everything basically, but I gotta eat some food, I'll be right here in a bit
+	
+	lda #$06
+	sta <param4
+	sta <param5
+	lda #$01
+	sta <param6
+	sta <param7
+	jsr buyUnit
+	
+	jmp AiDone
+	
+PlaceFarmAtRightmostTile:
 	jmp AiDone

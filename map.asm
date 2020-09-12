@@ -27,6 +27,9 @@ prng2:
 	rts
 	
 GenerateMap:
+	lda #MAP_WIDTH
+	sta MapWidth
+
 	lda globalTick
 	cmp #$00
 	bne seedStore
