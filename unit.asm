@@ -599,8 +599,14 @@ removeP1UnitLoop:
 
 removeP1UnitDone:
 	dec <p1UnitCount
+
+	; In attack mode, units are not drawn as being removed until the turn is over to allow for attack animation
+	lda attackMode
+	cmp #$01
+	beq removeP1UnitDoneNoDraw
 	jsr drawMapChunk
 	
+removeP1UnitDoneNoDraw:
 	rts
 	
 removeP2Unit:
@@ -640,8 +646,13 @@ removeP2UnitLoop:
 
 removeP2UnitDone:
 	dec <p2UnitCount
+	
+	lda attackMode
+	cmp #$01
+	beq removeP2UnitDoneNoDraw
 	jsr drawMapChunk
 	
+removeP2UnitDoneNoDraw:	
 	rts
 	
 ; only used when voluntarily deleting a unit, not when in battle.

@@ -89,3 +89,42 @@ testMap:
 	.db $00, $00, $00, $02, $02, $02, $02, $02, $00, $00, $02, $02, $00, $00, $00, $00
 	.db $00, $00, $00, $00, $02, $02, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
 	.db $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+	
+; takes in cursorX and Y, and turn
+placeFarmAtCursorPos:
+	ldy <turn
+	lda p1FarmCount, y
+	clc
+	adc #$01
+	sta p1FarmCount, y
+	
+	; place new farm tile in map
+	lda <cursorY 
+	asl a
+	asl a
+	asl a
+	asl a
+	clc
+	adc <cursorX
+	tax
+	lda #$03
+	sta MapData, x 
+	
+	; render new farm tile
+	lda <cursorX
+	sta <param4
+	lda <cursorY
+	clc
+	adc #MAP_DRAW_Y
+	sta <param5
+	lda #$01
+	sta <param6
+	sta <param7
+	jsr drawMapChunk
+
+	lda #$01
+	sta <guiMode
+	jsr closeCurrentTextBox
+	jsr endTurn
+	
+	rts

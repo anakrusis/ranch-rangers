@@ -85,6 +85,10 @@ moveAnimTargetX .rs 1
 moveAnimTargetY .rs 1
 showAnimSpriteFlag .rs 1
 
+	.rsset $03a0
+AINearestEnemyUnitToFarmer .rs 1
+NearestUnitToFarmerType    .rs 1
+
 ;FULL RESERVED FOR MAP AND UNIT DATA
 	.rsset $0400 ; Hey 400 page is full, dont add anything more here
 MapData .rs 192 ; the whole mapa xD
@@ -985,7 +989,21 @@ UnitMoveMetaSprites:
 ; chicken reserved
 	.db $00, $00, $00, $00
 	.db $00, $00, $00, $00
-	
+
+; cow front move
+	.db $00, $01, $10, $11
+	.db $02, $03, $12, $13
+; cow side move
+	.db $00, $01, $10, $11
+	.db $02, $03, $12, $13
+; cow back move
+	.db $00, $01, $10, $11
+	.db $02, $03, $12, $13
+; cow reserved
+	.db $00, $00, $00, $00
+	.db $00, $00, $00, $00
+		
+
 IndicatorSpriteAnimation:
 	.db $82, $83, $84, $83
 
@@ -1013,7 +1031,7 @@ text_TheLicc:
 	.db $1d, $31, $2e, $24, $15, $32, $2c, $2c, $ff ; "THE LICC"
 	
 text_EngineTitle:	
-	.db $1b, $1b, $28, $09, $27, $01, $01, $27, $02, $00, $02, $00, $ff ; rr.9/11/2020
+	.db $1b, $1b, $28, $09, $27, $01, $03, $27, $02, $00, $02, $00, $ff ; rr.9/13/2020
 	
 text_Icle:
 	.db $12, $0c, $15, $0e, $ff ; icle
