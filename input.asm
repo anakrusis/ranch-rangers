@@ -125,19 +125,29 @@ InputABuildScreen:
 	jsr AButtonBuildScreenHandler
 	jmp InputADone
 	
+InputAChickenScreen:
+	jsr AButtonChickenScreenHandler
+	jmp InputADone
+
 InputADebugMenuScreen:
 	lda menuCursorPos
 	cmp #$00
 	beq startgameDebug
-	jmp startgameNormal
+	
+startgameNormal:
+	;cursorPos 1 -> gameMode 0 (1 player)
+	;cursorPos 2 -> gameMode 1 (2 player)
+	lda menuCursorPos
+	sec
+	sbc #$01
+	sta gameMode
+	
+	jsr initGameState
+	jmp InputADone
 
 startgameDebug:
 	lda #$80
 	sta gameMode
-	jsr initGameState
-	jmp InputADone
-	
-startgameNormal:
 	jsr initGameState
 	jmp InputADone
 	
@@ -155,20 +165,6 @@ InputAGameOverScreen:
 	beq playAgain
 	jmp quitToMenu
 	
-playAgain:
-	jsr initGlobal
-	jsr initGameState
-	jmp InputADone
-	
-quitToMenu:
-	jsr initGlobal
-	jsr initDebugMenu
-	jmp InputADone
-	
-InputAChickenScreen:
-	jsr AButtonChickenScreenHandler
-	jmp InputADone
-	
 InputAFarmerScreen:
 MoveFarmer:
 	lda #$00
@@ -177,6 +173,16 @@ MoveFarmer:
 	sta guiMode
 	jsr calculateUnitMoves
 	jsr closeCurrentTextBox
+	jmp InputADone
+	
+playAgain:
+	jsr initGlobal
+	jsr initGameState
+	jmp InputADone
+	
+quitToMenu:
+	jsr initGlobal
+	jsr initDebugMenu
 	jmp InputADone
 	
 InputADone:

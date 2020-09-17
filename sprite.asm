@@ -247,6 +247,29 @@ drawTurnAnim:
 	jsr drawMetasprite
 	
 drawTurnAnimDone:
+	
+	lda showEggSpriteFlag
+	cmp #$00
+	bne drawEggAnim
+	jmp drawEggAnimDone
+
+drawEggAnim:
+	jsr doUnitMovementStep
+	lda #$80 ; egg
+	sta <param1
+	lda moveAnimX
+	sta <param2
+	
+	lda moveAnimY
+	;clc
+	;adc eggOffsetArc
+	sta <param3
+	
+	lda #$02 ;palette
+	sta <param4
+	jsr drawSprite
+
+drawEggAnimDone:
 drawSpritesDone:
 	rts
 	
@@ -324,6 +347,8 @@ drawMetaSpriteLoop:
 	rts
 	
 doUnitMovementStep:
+	inc eggOffsetArc ; only makes a difference with egg animation
+
 	lda cursorX
 	asl a
 	asl a
@@ -378,4 +403,54 @@ doMovSubY: ; moving up
 	sta moveAnimDir
 	dec moveAnimY
 doUnitMovementStepDone:	
+	rts
+	
+initChickenAtkAnim:
+	; for right now only the chicken has a seperate attack and movement
+	; but this can be handled here too later if we must account for other 
+	lda #$01
+	sta showEggSpriteFlag
+	
+	; turn * 32
+	lda turn
+	asl a
+	asl a
+	asl a
+	asl a
+	asl a
+	clc
+	adc unitSelected
+	tay
+	
+	lda p1PiecesX, y
+	sta <param4
+	lda p1PiecesY, y
+	sta <param5
+	
+	; now the sprite update setting its initial position to the old position set in param4/5
+	lda <param4
+	asl a
+	asl a
+	asl a
+	asl a
+	sta moveAnimX
+	lda <param5
+	clc
+	adc #MAP_DRAW_Y
+	asl a
+	asl a
+	asl a
+	asl a
+	sta moveAnimY
+	
+	lda <cursorX
+	asl a
+	asl a
+	asl a
+	asl a
+	sta moveAnimTargetX
+	
+	lda #$f0
+	sta eggOffsetArc
+	
 	rts

@@ -65,6 +65,7 @@ attackMode .rs 1 ; 1 when attacking, 0 when not attacking
 seed .rs 2
 
 spriteDrawCount .rs 1
+computerMustMakeMove .rs 1
 
 	.rsset $0100 ; these are all timers/values for animations and stuff, non-essential stuff really
 turnAnimTimer .rs 1
@@ -75,8 +76,8 @@ seasonPaletteChangeFlag .rs 1
 unitHeavenXpos  .rs 1 ; for the animation when a unit deads
 unitHeavenType  .rs 1
 unitHeavenTimer .rs 1
-computerMustMakeMove .rs 1
 endTurnTimer .rs 1
+
 moveAnimX .rs 1 ; for the animation when a unit moves
 moveAnimY .rs 1
 moveAnimDir .rs 1 ; forward 00 l/r 01 backwards 02
@@ -84,6 +85,9 @@ moveAnimFlip .rs 1 ; facing right (00) or left (01)
 moveAnimTargetX .rs 1
 moveAnimTargetY .rs 1
 showAnimSpriteFlag .rs 1
+
+showEggSpriteFlag .rs 1 ; for the animation when a chicken shoots egg
+eggOffsetArc .rs 1 ; used for the parabolic effect on the Y motion, begins negative and then goes positive
 
 	.rsset $03a0
 AINearestEnemyUnitToFarmer .rs 1
@@ -96,10 +100,12 @@ MapData .rs 192 ; the whole mapa xD
 p1PiecesX    .rs 8
 p1PiecesY    .rs 8
 p1PiecesType .rs 8
+p1PiecesRes  .rs 8
 
 p2PiecesX    .rs 8
 p2PiecesY    .rs 8
 p2PiecesType .rs 8
+p2PiecesRes  .rs 8
 
 	.rsset $0500
 p1Gold .rs 1
@@ -675,10 +681,10 @@ player2TurnStart:
 	sta guiMode
 	jsr openTextBox
 	
-	; temporarily only single player is enabled for now 
-	;lda #$00
-	;cmp gameMode
-	;bne player2TurnStartDone
+	; gamemode 01 is the 2 player mode
+	lda #$01
+	cmp gameMode
+	beq player2TurnStartDone
 	
 	lda #$01
 	sta computerMustMakeMove
@@ -706,6 +712,7 @@ endTurnTimerFinished:
 	sta endTurnTimer
 	lda #$00
 	sta showAnimSpriteFlag
+	sta showEggSpriteFlag
 	
 	lda #$01
 	sta <param6
@@ -1078,7 +1085,7 @@ text_Player2Win:
 	.db $2a, $fe, $19, $15, $0a, $22, $0e, $1b, $24, $02, $24, $20, $12, $17, $1c, $26, $ff
 	
 text_DebugMenu:
-	.db $16, $0e, $17, $1e, $fe, $0d, $0e, $0b, $1e, $10, $24, $16, $18, $0d, $0e, $fe, $17, $18, $1b, $16, $0a, $15, $ff
+	.db $2a, $fe, $0d, $0e, $0b, $1e, $10, $24, $01, $19, $fe, $01, $24, $19, $15, $0a, $22, $0e, $1b, $fe, $02, $24, $19, $15, $0a, $22, $0e, $1b, $ff
 	
 text_GameOverMenu:
 	.db $2a, $fe, $19, $15, $0a, $22, $24, $0a, $10, $0a, $12, $17, $fe, $1a, $1e, $12, $1d, $ff
@@ -1093,7 +1100,7 @@ GuiWidths:
 GuiHeights:
 	.db $01, $01, $03, $03, $02, $04, $03, $02, $02, $01, $01, $01, $02, $01, $01, $03, $06, $01
 GuiMenuSizes:
-	.db $00, $00, $02, $02, $01, $03, $02, $00, $00, $00, $00, $00, $00, $01, $01, $02, $02, $00
+	.db $00, $00, $02, $02, $01, $03, $02, $00, $00, $00, $00, $00, $00, $01, $01, $02, $03, $00
 	
 GuiPointerLow:
 	.db $00, LOW(text_EngineTitle), LOW(text_BuildMenu), LOW(text_UnitMenu), LOW(text_FarmerMenu), LOW(text_ChickenMenu), LOW(text_CowMenu), LOW(text_Player1Turn), LOW(text_Player2Turn), $00, $00, $00, LOW(text_Harvest), $00, $00, LOW(text_GameOverMenu), LOW(text_DebugMenu)
