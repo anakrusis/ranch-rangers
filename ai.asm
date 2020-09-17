@@ -288,6 +288,9 @@ ThreatenPositionLoop:
 	adc p1PiecesY, x
 	sta <param2
 	
+	; todo make sure the tile is land lol... already seen a couple Lake Chickens spawning by the AI
+	; they're chickens not ducks
+	
 	jsr checkUnitOnTile
 	
  ; looking for the first space without a unit occupying it
@@ -341,6 +344,8 @@ FindRightmostTileLoop:
 	lda MapData, x
 	cmp #$02
 	bne FindRightmostTileLoopTail
+	
+	; todo make sure no units on the tile where the farm is
 
 	jmp RightmostTileFound
 
@@ -379,6 +384,13 @@ RightmostTileFound:
 	jsr placeFarmAtCursorPos
 	jmp AiDone
 	
+	; farmer, chicken, cow
+UnitThreatOffsetsX:
+	.db $00, $00, $10
+UnitThreatOffsetsY:
+	.db $00, $08, $18
+	
+UnitThreats:
 ; tile offsets where a unit can be threatened by a chicken
 ChickenThreatX:
 	.db $01, $01, $ff, $ff, $02, $02, $fe, $fe

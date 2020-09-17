@@ -236,9 +236,14 @@ calculateUnitMoves:
 calcRange:
 	lda unitSelectedType
 	asl a
-	sta param8
+	sta <param8
 
 	lda attackMode ; attack is 01, move is 00
+	cmp #$00
+	beq calcMovesMoveMode
+	jmp calcMovesAttackMode
+	
+calcMovesMoveMode:
 	clc
 	adc param8
 	tay
@@ -280,20 +285,6 @@ calcMovesXLoop:
 	tya
 	pha
 	
-calcMovesCheckTerrain:
-	lda <param2
-	asl a       
-	asl a      
-	asl a
-	asl a
-	clc
-	adc <param1
-	tay
-	lda MapData, y
-	cmp #$02
-	beq calcMovesCheckUnit
-	jmp calcMovesXLoopTail
-	
 calcMovesCheckUnit:
 	; param1 and param2 already setup!
 	jsr checkUnitOnTile
@@ -326,74 +317,142 @@ calcMovesYLoopTail:
 calcMovesDone:
 	rts
 	
+; attack mode functions differently from the other modes, it uses fixed (relative) tables to determine the attack pattern of each mob
+calcMovesAttackMode:
+	ldx #$00
+calcMovesAttackModeLoop:
+	ldy unitSelectedType
+	
+	; 11/12 store the beginning byte into UnitThreats, the spaces where a unit can threaten
+	lda UnitThreatOffsetsX, y
+	sta <param11
+	lda UnitThreatOffsetsY, y
+	sta <param12
+	
+	; get the relative X value
+	txa
+	clc
+	adc <param11
+	tay
+	lda UnitThreats, y
+	; add on the units X
+	clc
+	adc <unitSelectedX
+	sta <param1
+	
+	; get the relative Y value
+	txa
+	clc
+	adc <param12
+	tay
+	lda UnitThreats, y
+	; add on the units Y
+	clc
+	adc <unitSelectedY
+	sta <param2
+	
+	; param1 and param2 already setup!
+	jsr checkUnitOnTile
+	jsr mapDecideUnitMoveValid
+	cmp #$00
+	beq calcMovesAttackModeLoopTail
+
+	ldy validMovesCount
+	lda <param1
+	sta validMovesX, y
+	lda <param2
+	sta validMovesY, y
+	
+	inc validMovesCount	
+	
+calcMovesAttackModeLoopTail:
+	inx
+	cpx #$08
+	bne calcMovesAttackModeLoop
+	
+	rts
+	
 ; input: whatever checkUnitOnTile outputs, and guiMode which is set before
 ; output: validity of move in A
 mapDecideUnitMoveValid:
-
-	; special case for cow where:
-	; either unitSelectedX and param1 must match or unitSelectedY and param2 must match
-	; (both can't match because that would be matching the space of unitSelected and it would consider it friendly fire)
-	; so it has rook-type movement, only can go straight not diagonal
-	lda unitSelectedType
-	cmp #$02
-	beq CowMoveCheck
-	jmp ChickenMoveCheck
-	
-CowMoveCheck:	
-	lda unitSelectedX
-	cmp param1
-	beq XEqual
-
-	lda unitSelectedY
-	cmp param2
-	beq YEqual
-	jmp MoveInvalid
-	
-XEqual:
-	lda unitSelectedY
-	cmp param2
-	bne AtkMoveModeEval
-	jmp MoveInvalid
-	
-YEqual:
-	lda unitSelectedX
-	cmp param1
-	bne AtkMoveModeEval
-	jmp MoveInvalid
-	
-	; special case for chicken:
-	; can only shoot eggs diagonally, so the difference between the new and old position must be
-	; equal in both X and Y, positive or negative.
-ChickenMoveCheck:
-	lda unitSelectedType
-	cmp #$01
-	bne AtkMoveModeEval
-	lda attackMode
-	cmp #$01
-	bne AtkMoveModeEval
-	
-	lda param1
-	sec
-	sbc unitSelectedX
-	sta param8 ; x difference in param8
-	
-	lda param2
-	sec
-	sbc unitSelectedY
-	sta param9 ; y difference in param9
-	
-	cmp param8 ; compare x&y diff unaltered
-	beq AtkMoveModeEval
-	
-	eor #$ff ; now check the twos complement of y distance and try again
+mapDecideCheckTerrain:
+	lda <param2
+	asl a       
+	asl a      
+	asl a
+	asl a
 	clc
-	adc #$01
-	cmp param8
-	beq AtkMoveModeEval
-	
+	adc <param1
+	tay
+	lda MapData, y
+	cmp #$02
+	beq mapDecideModeEval
 	jmp MoveInvalid
 
-AtkMoveModeEval:
+	; ; special case for cow where:
+	; ; either unitSelectedX and param1 must match or unitSelectedY and param2 must match
+	; ; (both can't match because that would be matching the space of unitSelected and it would consider it friendly fire)
+	; ; so it has rook-type movement, only can go straight not diagonal
+	; lda unitSelectedType
+	; cmp #$02
+	; beq CowMoveCheck
+	; jmp ChickenMoveCheck
+	
+; CowMoveCheck:	
+	; lda unitSelectedX
+	; cmp param1
+	; beq XEqual
+
+	; lda unitSelectedY
+	; cmp param2
+	; beq YEqual
+	; jmp MoveInvalid
+	
+; XEqual:
+	; lda unitSelectedY
+	; cmp param2
+	; bne AtkMoveModeEval
+	; jmp MoveInvalid
+	
+; YEqual:
+	; lda unitSelectedX
+	; cmp param1
+	; bne AtkMoveModeEval
+	; jmp MoveInvalid
+	
+	; ; special case for chicken:
+	; ; can only shoot eggs diagonally, so the difference between the new and old position must be
+	; ; equal in both X and Y, positive or negative.
+; ChickenMoveCheck:
+	; lda unitSelectedType
+	; cmp #$01
+	; bne AtkMoveModeEval
+	; lda attackMode
+	; cmp #$01
+	; bne AtkMoveModeEval
+	
+	; lda param1
+	; sec
+	; sbc unitSelectedX
+	; sta param8 ; x difference in param8
+	
+	; lda param2
+	; sec
+	; sbc unitSelectedY
+	; sta param9 ; y difference in param9
+	
+	; cmp param8 ; compare x&y diff unaltered
+	; beq AtkMoveModeEval
+	
+	; eor #$ff ; now check the twos complement of y distance and try again
+	; clc
+	; adc #$01
+	; cmp param8
+	; beq AtkMoveModeEval
+	
+	; jmp MoveInvalid
+
+mapDecideModeEval:
 	; attack mode?
 	lda attackMode
 	cmp #$01
