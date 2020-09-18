@@ -262,14 +262,16 @@ EnemyHasCow:
 
 
 ; these are all the relative positions where an enemy could threaten the enemy of a different type
-	ldy #$00
+	ldx #$00
 ThreatenPositionLoop:
 	; x position loaded
+	txa
+	tay
 	lda [param12], y
 	sta <param1
 	
 	; y position at an offset of 8 bytes after
-	tya
+	txa
 	clc
 	adc #$08
 	tay
@@ -278,20 +280,32 @@ ThreatenPositionLoop:
 	sta <param2
 	
 	; because it's relative, to get an absolute position we must add the pos of the enemy unit
-	ldx AINearestEnemyUnitToFarmer
+	ldy AINearestEnemyUnitToFarmer
 	lda <param1
 	clc
-	adc p1PiecesX, x
+	adc p1PiecesX, y
 	sta <param1
 	lda <param2
 	clc
-	adc p1PiecesY, x
+	adc p1PiecesY, y
 	sta <param2
 	
 	; todo make sure the tile is land lol... already seen a couple Lake Chickens spawning by the AI
 	; they're chickens not ducks
 	
+	lda MapWidth ; make sure tile X is more than or equal to MapWidth/2 (put in param4) (ENEMY TERRITORY)
+	lsr a
+	sta <param4
+	
+	lda <param1
+	cmp <param4
+	bcc ThreatenPositionLoopTail
+	
+	tya
+	pha
 	jsr checkUnitOnTile
+	pla
+	tay
 	
  ; looking for the first space without a unit occupying it
 	
@@ -321,8 +335,8 @@ ThreatenPositionSpawnCow:
 	jmp PlaceUnitAtTheSpot
 
 ThreatenPositionLoopTail:
-	iny
-	cpy #$08
+	inx
+	cpx #$08
 	bne ThreatenPositionLoop
 	
 	jmp PlaceUnitAtTheSpot
@@ -334,6 +348,8 @@ PlaceUnitAtTheSpot:
 	jsr buyUnit
 	
 	jmp AiDone
+	
+; This subroutine doesn't take in any parameters, it generates the rightmost available grass tile using just the MapData and MapWidth, but it has to move CursorX/Y in order to carry out the placing farm subroutine (not a problem)
 	
 PlaceFarmAtRightmostTile:
 	ldx MapWidth
