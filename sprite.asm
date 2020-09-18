@@ -254,15 +254,57 @@ drawTurnAnimDone:
 	jmp drawEggAnimDone
 
 drawEggAnim:
+drawEggAnimCheckDone:
+	lda moveAnimX
+	cmp moveAnimTargetX
+	bne drawEggAnimNotDone
+	
+	lda moveAnimY
+	cmp moveAnimTargetY
+	bne drawEggAnimNotDone
+	
+	lda eggAnimOffset
+	cmp #$00
+	bne drawEggAnimNotDone
+	
+	lda #$00
+	sta showEggSpriteFlag
+
+drawEggAnimNotDone:
 	jsr doUnitMovementStep
 	lda #$80 ; egg
 	sta <param1
+	
 	lda moveAnimX
+	clc
+	adc #$04 ; middle of the metatile
 	sta <param2
 	
-	lda moveAnimY
-	;clc
-	;adc eggOffsetArc
+	; gets divided by two because the resulting arc is too big
+eggAnimOffsetSgnCheck:
+	lda eggAnimOffset
+	; cmp #$80
+	; bcs eggAnimOffsetNegative
+	
+	; lsr a
+	
+	; jmp eggAnimOffsetDivideDone
+	
+; eggAnimOffsetNegative:
+	; eor #$ff
+	; clc
+	; adc #$01
+	; lsr a
+	; eor #$ff
+	; clc
+	; adc #$01
+	
+eggAnimOffsetDivideDone:
+
+	clc
+	adc moveAnimY
+	clc
+	adc #$04 ; ditto
 	sta <param3
 	
 	lda #$02 ;palette
@@ -347,7 +389,19 @@ drawMetaSpriteLoop:
 	rts
 	
 doUnitMovementStep:
-	inc eggOffsetArc ; only makes a difference with egg animation
+	; eggimation only updates every other frame.
+	lda globalTick
+	and #$01
+	cmp #$00
+	bne doUnitAnimEggStepDone
+doUnitEggAnimStep:
+	lda eggAnimOffset
+	clc
+	adc eggAnimYVelocity
+	sta eggAnimOffset
+
+	inc eggAnimYVelocity ; only makes a difference with egg animation
+doUnitAnimEggStepDone:
 
 	lda cursorX
 	asl a
@@ -450,7 +504,38 @@ initChickenAtkAnim:
 	asl a
 	sta moveAnimTargetX
 	
-	lda #$f0
-	sta eggOffsetArc
+	lda #$00
+	sta eggAnimOffset
+	
+	; the calc for eggAnimYVelocity gets the distance in tiles between the target and start
+	; multiplies it by 16 to get a per-pixel measurement
+	; divides it by two to get the midpoint 
+	; divides it by two again to get half of that
+	; and subtracts that value so that (for instance 16 pixels would go -8...0...7) and end up in an arc that finishes properly
+	
+	lda <unitSelectedX
+	sta <param1
+	lda <unitSelectedY
+	sta <param2
+	lda <cursorX
+	sta <param3
+	lda <cursorY
+	sta <param4
+	jsr chebyshevDistance
+	
+	asl a
+	asl a
+	asl a
+	asl a
+	
+	lsr a
+	lsr a
+	sta <param5
+	
+	lda #$00
+	sec
+	sbc <param5
+	
+	sta eggAnimYVelocity
 	
 	rts

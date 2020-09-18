@@ -87,7 +87,8 @@ moveAnimTargetY .rs 1
 showAnimSpriteFlag .rs 1
 
 showEggSpriteFlag .rs 1 ; for the animation when a chicken shoots egg
-eggOffsetArc .rs 1 ; used for the parabolic effect on the Y motion, begins negative and then goes positive
+eggAnimOffset .rs 1 ; should appear to do an arc
+eggAnimYVelocity .rs 1 ; used to create the arc
 
 	.rsset $03a0
 AINearestEnemyUnitToFarmer .rs 1
